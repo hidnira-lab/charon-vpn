@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver};
 
 use events::AppEvent;
+use process::network_reset;
 use process::xray::XrayProcess;
 use tunnel::tun2proxy_runner::TunnelHandle;
 
@@ -105,6 +106,8 @@ impl eframe::App for CharonApp {
                         Ok(()) => self.push_log("[app] tunnel exited".to_string()),
                         Err(e) => self.push_log(format!("[app] tunnel error: {e}")),
                     }
+                    self.push_log("[app] resetting network to clear any leftover routes...".to_string());
+                    network_reset::run(self.tx.clone());
                 }
             }
         }
