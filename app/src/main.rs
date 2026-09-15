@@ -1,16 +1,11 @@
-mod events;
-mod log_bridge;
-mod process;
-mod tunnel;
-
 use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver};
+use std::sync::Arc;
 
-use events::AppEvent;
-use process::network_reset;
-use process::xray::XrayProcess;
-use tunnel::tun2proxy_runner::TunnelHandle;
+use charon_core::tunnel::TunnelHandle;
+use charon_core::xray::XrayProcess;
+use charon_core::{log_bridge, platform, AppEvent, Waker};
 
 const MAX_LOG_LINES: usize = 500;
 const LOCAL_SOCKS_PROXY: &str = "socks5://127.0.0.1:10808";
@@ -26,13 +21,33 @@ struct CharonApp {
     tx: mpsc::Sender<AppEvent>,
 }
 
+/// `charon-vpn.exe` always lands at `target/{debug,release}/` under the
+/// workspace root (set by the root `Cargo.toml`), so its grandparent
+/// directory is the workspace root regardless of how it's launched (double
+/// click sets CWD to the exe's own folder, breaking paths relative to CWD).
+fn workspace_root() -> PathBuf {
+    std::env::current_exe()
+        .expect("failed to resolve current exe path")
+        .parent()
+        .and_then(|target_profile_dir| target_profile_dir.parent())
+        .and_then(|target_dir| target_dir.parent())
+        .expect("charon-vpn.exe is expected at target/<profile>/ under the workspace root")
+        .to_path_buf()
+}
+
+fn waker_for(ctx: &egui::Context) -> Waker {
+    let ctx = ctx.clone();
+    Arc::new(move || ctx.request_repaint())
+}
+
 impl CharonApp {
     fn new(ctx: &egui::Context) -> Self {
         let (tx, rx) = mpsc::channel();
-        log_bridge::init(tx.clone(), ctx.clone());
+        log_bridge::init(tx.clone(), waker_for(ctx));
+        let workspace_root = workspace_root();
         Self {
-            xray_path: PathBuf::from("bin/xray.exe"),
-            config_path: PathBuf::from("../secrets/client-config.json"),
+            xray_path: workspace_root.join("app/bin/xray.exe"),
+            config_path: workspace_root.join("secrets/client-config.json"),
             xray: None,
             tunnel: None,
             logs: VecDeque::new(),
@@ -52,8 +67,12 @@ impl CharonApp {
         if self.xray.is_some() {
             return;
         }
-        match XrayProcess::spawn(&self.xray_path, &self.config_path, self.tx.clone(), ctx.clone())
-        {
+        match XrayProcess::spawn(
+            &self.xray_path,
+            &self.config_path,
+            self.tx.clone(),
+            waker_for(ctx),
+        ) {
             Ok(proc) => {
                 self.xray = Some(proc);
                 self.push_log(format!("[app] xray started ({})", self.xray_path.display()));
@@ -107,7 +126,7 @@ impl eframe::App for CharonApp {
                         Err(e) => self.push_log(format!("[app] tunnel error: {e}")),
                     }
                     self.push_log("[app] resetting network to clear any leftover routes...".to_string());
-                    network_reset::run(self.tx.clone());
+                    platform::windows_network_reset::run(self.tx.clone());
                 }
             }
         }

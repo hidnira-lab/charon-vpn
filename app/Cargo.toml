@@ -5,10 +5,6 @@ edition = "2024"
 publish = false
 
 [dependencies]
-cidr = "0.3"
+charon-core = { path = "../core" }
 eframe = { version = "0.36", features = ["glow"] }
 egui = "0.36"
-tun2proxy = "0.8"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
-tokio-util = "0.7"
-log = "0.4"
