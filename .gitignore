@@ -1,0 +1,9 @@
+secrets/
+*.secret.json
+client-config*.json
+*.env
+
+target/
+app/bin/
+app/profile.json
+app/generated-client-config.json
