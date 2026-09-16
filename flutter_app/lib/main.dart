@@ -6,10 +6,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_app/src/rust/api/simple.dart';
 import 'package:flutter_app/src/rust/frb_generated.dart';
 
+import 'android_channel.dart';
 import 'app_settings.dart';
 import 'design/design.dart';
 import 'profile_form_dialog.dart';
 import 'server_profiles.dart';
+import 'split_tunnel.dart';
 import 'tabs/config_tab.dart';
 import 'tabs/dashboard_tab.dart';
 import 'tabs/devices_tab.dart';
@@ -21,7 +23,6 @@ import 'vless_link.dart';
 
 const _maxLogLines = 500;
 const _localSocksProxy = 'socks5://127.0.0.1:10808';
-const _androidVpnChannel = MethodChannel('com.charonvpn.flutter_app/vpn');
 
 /// `flutter_app.exe` lands at `build/windows/x64/runner/<Config>/` under the
 /// `flutter_app` project directory, which itself lives directly under the
@@ -65,6 +66,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
   final _bridge = CharonBridge();
   final _profileStore = ProfileStore();
   final _appSettings = AppSettings();
+  final _splitTunnelStore = SplitTunnelStore();
   final _logs = <String>[];
   final _scrollController = ScrollController();
   StreamSubscription<CharonEvent>? _eventSub;
@@ -72,6 +74,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
 
   List<ServerProfile> _profiles = [];
   String? _activeProfileId;
+  List<SplitRule> _excludedApps = [];
 
   int _selectedIndex = 0;
   bool _xrayRunning = false;
@@ -105,7 +108,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
     super.initState();
     _eventSub = _bridge.events().listen(_onEvent);
     if (Platform.isAndroid) {
-      _androidVpnChannel.setMethodCallHandler(_onAndroidChannelCall);
+      androidVpnChannel.setMethodCallHandler(_onAndroidChannelCall);
     }
     _sessionTicker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_connectedAt != null) {
@@ -120,6 +123,8 @@ class _CharonHomePageState extends State<CharonHomePage> {
   /// fire on app launch, not every time that page is closed.
   Future<void> _bootstrap() async {
     await _loadProfiles();
+    final excludedApps = await _splitTunnelStore.loadApps();
+    setState(() => _excludedApps = excludedApps);
     final autoConnect = await _appSettings.loadAutoConnect();
     setState(() => _autoConnect = autoConnect);
     if (autoConnect && _activeProfile != null) {
@@ -198,6 +203,21 @@ class _CharonHomePageState extends State<CharonHomePage> {
       }
     });
     await _profileStore.save(_profiles, _activeProfileId);
+  }
+
+  Future<void> _addExcludedApp(SplitRule rule) async {
+    setState(() => _excludedApps.add(rule));
+    await _splitTunnelStore.saveApps(_excludedApps);
+  }
+
+  Future<void> _toggleExcludedApp(int index) async {
+    setState(() => _excludedApps[index] = _excludedApps[index].copyWith(excluded: !_excludedApps[index].excluded));
+    await _splitTunnelStore.saveApps(_excludedApps);
+  }
+
+  Future<void> _removeExcludedApp(int index) async {
+    setState(() => _excludedApps.removeAt(index));
+    await _splitTunnelStore.saveApps(_excludedApps);
   }
 
   Future<void> _openProfileForm({ServerProfile? existing}) async {
@@ -337,7 +357,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
     try {
       final String xrayPath;
       if (Platform.isAndroid) {
-        final nativeLibDir = await _androidVpnChannel.invokeMethod<String>(
+        final nativeLibDir = await androidVpnChannel.invokeMethod<String>(
           'getNativeLibDir',
         );
         xrayPath = '$nativeLibDir/libxray.so';
@@ -364,7 +384,8 @@ class _CharonHomePageState extends State<CharonHomePage> {
       // The actual `startTunnel` bridge call happens in
       // `_onAndroidChannelCall` once the fd is established asynchronously.
       try {
-        await _androidVpnChannel.invokeMethod('prepareAndStart');
+        final excludedPackages = _excludedApps.where((r) => r.excluded).map((r) => r.id).toList();
+        await androidVpnChannel.invokeMethod('prepareAndStart', {'excludedPackages': excludedPackages});
       } catch (e) {
         _pushLog('[app] VPN permission not granted: $e');
       }
@@ -391,7 +412,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
   Future<void> _stopTunnel() async {
     await _bridge.stopTunnel();
     if (Platform.isAndroid) {
-      await _androidVpnChannel.invokeMethod('stop');
+      await androidVpnChannel.invokeMethod('stop');
     }
     _pushLog('[app] tunnel stopping...');
   }
@@ -466,7 +487,12 @@ class _CharonHomePageState extends State<CharonHomePage> {
           onImportLink: _importFromLink,
         );
       case 2:
-        return const SplitTab();
+        return SplitTab(
+          apps: _excludedApps,
+          onAddApp: _addExcludedApp,
+          onToggleApp: _toggleExcludedApp,
+          onRemoveApp: _removeExcludedApp,
+        );
       case 3:
         return FailsafeTab(
           killSwitch: _killSwitch,

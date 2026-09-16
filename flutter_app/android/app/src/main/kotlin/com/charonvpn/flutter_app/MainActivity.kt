@@ -15,6 +15,12 @@ class MainActivity : FlutterActivity() {
     private var channel: MethodChannel? = null
     private var prepareResult: MethodChannel.Result? = null
 
+    // Set on every "prepareAndStart" call, read by startVpnService() below -
+    // needed on both the immediate-start path and the onActivityResult path
+    // (permission dialog), since the Intent extra has to be attached to
+    // whichever Intent actually launches CharonVpnService.
+    private var excludedPackages: ArrayList<String> = arrayListOf()
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         val ch = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL_NAME)
@@ -22,7 +28,29 @@ class MainActivity : FlutterActivity() {
         ch.setMethodCallHandler { call, result ->
             when (call.method) {
                 "getNativeLibDir" -> result.success(applicationInfo.nativeLibraryDir)
+                "listInstalledApps" -> {
+                    // Only launchable apps (has a launcher icon), not every
+                    // package on the device - keeps the split-tunnel picker
+                    // to apps a user would recognize, and needs only the
+                    // MAIN/LAUNCHER <queries> declaration, not the sensitive
+                    // QUERY_ALL_PACKAGES permission.
+                    val launcherIntent = Intent(Intent.ACTION_MAIN, null)
+                        .addCategory(Intent.CATEGORY_LAUNCHER)
+                    val apps = packageManager.queryIntentActivities(launcherIntent, 0)
+                        .distinctBy { it.activityInfo.packageName }
+                        .filter { it.activityInfo.packageName != packageName }
+                        .map {
+                            mapOf(
+                                "label" to it.loadLabel(packageManager).toString(),
+                                "packageName" to it.activityInfo.packageName,
+                            )
+                        }
+                        .sortedBy { it["label"] }
+                    result.success(apps)
+                }
                 "prepareAndStart" -> {
+                    @Suppress("UNCHECKED_CAST")
+                    excludedPackages = ArrayList(call.argument<List<String>>("excludedPackages") ?: emptyList())
                     val intent = VpnService.prepare(this)
                     if (intent != null) {
                         prepareResult = result
@@ -46,6 +74,7 @@ class MainActivity : FlutterActivity() {
 
     private fun startVpnService() {
         val intent = Intent(this, CharonVpnService::class.java)
+        intent.putStringArrayListExtra("excludedPackages", excludedPackages)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent)
         } else {

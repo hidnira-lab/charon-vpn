@@ -1,31 +1,37 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../android_channel.dart';
 import '../design/design.dart';
+import '../split_tunnel.dart';
 
-class SplitRule {
-  const SplitRule({required this.name, required this.id, required this.excluded});
-
-  final String name;
-  final String id;
-  final bool excluded;
-
-  SplitRule copyWith({bool? excluded}) => SplitRule(name: name, id: id, excluded: excluded ?? this.excluded);
-}
-
-/// Milestone 6.5 — UI only. Rules live in local widget state (nothing is
-/// persisted or actually excluded from the tunnel) until Milestone 7 builds
-/// the real bypass mechanism (app-based on Android, domain/CIDR-based on
-/// Windows — app-based Windows exclude is parked, needs WFP).
+/// Milestone 7 (Android): Applications rules are now persisted and actually
+/// excluded from the tunnel via `VpnService.Builder.addDisallowedApplication`
+/// on the next connect - see `CharonVpnService.kt`. Domains are still UI-only
+/// placeholders (local widget state, nothing persisted or excluded). Windows
+/// app-based exclude remains parked - needs Windows Filtering Platform, which
+/// has no turnkey Rust library yet.
 class SplitTab extends StatefulWidget {
-  const SplitTab({super.key});
+  const SplitTab({
+    super.key,
+    required this.apps,
+    required this.onAddApp,
+    required this.onToggleApp,
+    required this.onRemoveApp,
+  });
+
+  final List<SplitRule> apps;
+  final ValueChanged<SplitRule> onAddApp;
+  final ValueChanged<int> onToggleApp;
+  final ValueChanged<int> onRemoveApp;
 
   @override
   State<SplitTab> createState() => _SplitTabState();
 }
 
 class _SplitTabState extends State<SplitTab> {
-  final _apps = <SplitRule>[];
   final _domains = <SplitRule>[];
 
   Future<void> _openAddDialog({
@@ -69,6 +75,39 @@ class _SplitTabState extends State<SplitTab> {
     if (result != null) onSubmit(result);
   }
 
+  Future<void> _openAddAppDialog() async {
+    if (!Platform.isAndroid) {
+      await _openAddDialog(
+        title: 'Exclude Application',
+        nameLabel: 'Nama app',
+        idLabel: 'Package/process name',
+        idHint: 'mis. steam.exe',
+        onSubmit: widget.onAddApp,
+      );
+      return;
+    }
+    List<_InstalledApp> apps;
+    try {
+      final raw = await androidVpnChannel.invokeMethod<List<Object?>>('listInstalledApps') ?? [];
+      apps = raw
+          .cast<Map<Object?, Object?>>()
+          .map((e) => _InstalledApp(label: e['label'] as String, packageName: e['packageName'] as String))
+          .toList();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal ambil daftar app: $e')));
+      }
+      return;
+    }
+    final excludedIds = widget.apps.map((r) => r.id).toSet();
+    if (!mounted) return;
+    final result = await showDialog<SplitRule>(
+      context: context,
+      builder: (context) => _AppPickerDialog(apps: apps, alreadyAdded: excludedIds),
+    );
+    if (result != null) widget.onAddApp(result);
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -87,10 +126,14 @@ class _SplitTabState extends State<SplitTab> {
             child: Text('EXCLUDED TRAFFIC EGRESSES ON THE LOCAL NETWORK — UNPROTECTED'),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'UI placeholder — rules di sini belum beneran ngecualiin apa-apa dari tunnel sampai '
-            'Milestone 7 (backend exclude) digarap.',
-            style: TextStyle(color: CharonColors.muted, fontSize: 12),
+          Text(
+            Platform.isAndroid
+                ? 'Applications dipilih dari app terinstall, yang di-EXCL bakal skip tunnel mulai koneksi '
+                    'berikutnya (perubahan nggak langsung ke-apply kalau tunnel lagi connected). Domains '
+                    'masih UI placeholder.'
+                : 'Applications exclude belum ada mekanismenya di Windows (nunggu Windows Filtering '
+                    'Platform). Domains masih UI placeholder.',
+            style: const TextStyle(color: CharonColors.muted, fontSize: 12),
           ),
           const SizedBox(height: 24),
           LayoutBuilder(
@@ -99,17 +142,11 @@ class _SplitTabState extends State<SplitTab> {
                 heading: 'Applications',
                 icon: LucideIcons.laptop,
                 codePrefix: 'APP',
-                items: _apps,
+                items: widget.apps,
                 emptyHint: 'applications',
-                onAdd: () => _openAddDialog(
-                  title: 'Exclude Application',
-                  nameLabel: 'Nama app',
-                  idLabel: 'Package/process name',
-                  idHint: 'mis. com.tencent.mm (Android) atau steam.exe (Windows)',
-                  onSubmit: (r) => setState(() => _apps.add(r)),
-                ),
-                onToggle: (i) => setState(() => _apps[i] = _apps[i].copyWith(excluded: !_apps[i].excluded)),
-                onRemove: (i) => setState(() => _apps.removeAt(i)),
+                onAdd: _openAddAppDialog,
+                onToggle: widget.onToggleApp,
+                onRemove: widget.onRemoveApp,
               );
               final domains = _RuleList(
                 heading: 'Domains',
@@ -235,6 +272,82 @@ class _RuleList extends StatelessWidget {
                 ),
               ),
             ),
+      ],
+    );
+  }
+}
+
+class _InstalledApp {
+  const _InstalledApp({required this.label, required this.packageName});
+
+  final String label;
+  final String packageName;
+}
+
+/// Searchable picker over launchable apps on the device (Android only - see
+/// `MainActivity.kt`'s `listInstalledApps` handler). Replaces manual package
+/// name entry now that a real query mechanism exists, unlike the fake static
+/// picker in the original Figma Make reference.
+class _AppPickerDialog extends StatefulWidget {
+  const _AppPickerDialog({required this.apps, required this.alreadyAdded});
+
+  final List<_InstalledApp> apps;
+  final Set<String> alreadyAdded;
+
+  @override
+  State<_AppPickerDialog> createState() => _AppPickerDialogState();
+}
+
+class _AppPickerDialogState extends State<_AppPickerDialog> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _query.toLowerCase();
+    final filtered = widget.apps
+        .where((a) => !widget.alreadyAdded.contains(a.packageName))
+        .where((a) => a.label.toLowerCase().contains(query) || a.packageName.toLowerCase().contains(query))
+        .toList();
+    return AlertDialog(
+      title: const Text('Exclude Application'),
+      content: SizedBox(
+        width: 420,
+        height: 440,
+        child: Column(
+          children: [
+            TextField(
+              autofocus: true,
+              decoration: const InputDecoration(labelText: 'Cari app', prefixIcon: Icon(Icons.search)),
+              onChanged: (v) => setState(() => _query = v),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: filtered.isEmpty
+                  ? const Center(
+                      child: Text('Nggak ada app cocok', style: TextStyle(color: CharonColors.muted)),
+                    )
+                  : ListView.builder(
+                      itemCount: filtered.length,
+                      itemBuilder: (context, i) {
+                        final app = filtered[i];
+                        return ListTile(
+                          title: Text(app.label),
+                          subtitle: Text(
+                            app.packageName,
+                            style: const TextStyle(fontFamily: CharonFonts.mono, fontSize: 11),
+                          ),
+                          onTap: () => Navigator.of(context).pop(
+                            SplitRule(name: app.label, id: app.packageName, excluded: true),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Batal')),
       ],
     );
   }

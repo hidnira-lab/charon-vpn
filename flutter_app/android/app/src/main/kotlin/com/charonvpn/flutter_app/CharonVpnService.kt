@@ -47,6 +47,20 @@ class CharonVpnService : VpnService() {
             // Can't happen for our own package name, but the API is checked.
         }
 
+        // User-configured split-tunnel exclusions (Milestone 7). Packages
+        // that aren't installed (typo, uninstalled app) throw and are
+        // skipped - there's no channel back to Dart from here to surface
+        // that, so it's logged for diagnosis instead.
+        val userExcluded = intent?.getStringArrayListExtra("excludedPackages") ?: arrayListOf()
+        for (pkg in userExcluded) {
+            if (pkg == packageName) continue
+            try {
+                builder.addDisallowedApplication(pkg)
+            } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
+                android.util.Log.w("CharonVpnService", "split-tunnel: package not installed, skipped: $pkg")
+            }
+        }
+
         vpnInterface = builder.establish()
 
         // detachFd() transfers ownership of the underlying fd out of this
