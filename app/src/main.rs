@@ -94,7 +94,7 @@ impl CharonApp {
         if self.tunnel.is_some() {
             return;
         }
-        match TunnelHandle::start(LOCAL_SOCKS_PROXY, VPN_SERVER_IP, self.tx.clone()) {
+        match TunnelHandle::start(LOCAL_SOCKS_PROXY, VPN_SERVER_IP, &[], self.tx.clone()) {
             Ok(handle) => {
                 self.tunnel = Some(handle);
                 self.push_log("[app] tunnel started".to_string());

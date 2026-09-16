@@ -1,9 +1,8 @@
-use std::str::FromStr;
 use std::sync::mpsc::Sender;
 
-use cidr::IpCidr;
 use tun2proxy::{ArgProxy, ArgVerbosity, Args, CancellationToken};
 
+use crate::tunnel::apply_bypass;
 use crate::AppEvent;
 
 pub struct TunnelHandle {
@@ -13,15 +12,20 @@ pub struct TunnelHandle {
 }
 
 impl TunnelHandle {
-    pub fn start(proxy_url: &str, server_ip: &str, tx: Sender<AppEvent>) -> Result<Self, String> {
+    pub fn start(
+        proxy_url: &str,
+        server_ip: &str,
+        bypass_cidrs: &[String],
+        tx: Sender<AppEvent>,
+    ) -> Result<Self, String> {
         let proxy = ArgProxy::try_from(proxy_url).map_err(|e| e.to_string())?;
         let mut args = Args::default();
         args.proxy(proxy);
         // Without this, xray's own outbound connection to the real VPN server
         // gets re-captured by the TUN adapter and looped back into itself,
         // exhausting local sockets (Windows error 10055) within seconds.
-        let bypass_cidr = format!("{server_ip}/32");
-        args.bypass(IpCidr::from_str(&bypass_cidr).map_err(|e| e.to_string())?);
+        // Also applies any split-tunnel domain/CIDR bypass rules.
+        apply_bypass(&mut args, server_ip, bypass_cidrs, &tx)?;
         // Info level logs every single connection on the whole PC once full TUN
         // capture is on - way too noisy for the GUI log panel. Warn+ only.
         args.verbosity(ArgVerbosity::Warn);

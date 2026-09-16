@@ -75,6 +75,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
   List<ServerProfile> _profiles = [];
   String? _activeProfileId;
   List<SplitRule> _excludedApps = [];
+  List<SplitRule> _domainRules = [];
 
   int _selectedIndex = 0;
   bool _xrayRunning = false;
@@ -124,7 +125,11 @@ class _CharonHomePageState extends State<CharonHomePage> {
   Future<void> _bootstrap() async {
     await _loadProfiles();
     final excludedApps = await _splitTunnelStore.loadApps();
-    setState(() => _excludedApps = excludedApps);
+    final domainRules = await _splitTunnelStore.loadDomains();
+    setState(() {
+      _excludedApps = excludedApps;
+      _domainRules = domainRules;
+    });
     final autoConnect = await _appSettings.loadAutoConnect();
     setState(() => _autoConnect = autoConnect);
     if (autoConnect && _activeProfile != null) {
@@ -218,6 +223,48 @@ class _CharonHomePageState extends State<CharonHomePage> {
   Future<void> _removeExcludedApp(int index) async {
     setState(() => _excludedApps.removeAt(index));
     await _splitTunnelStore.saveApps(_excludedApps);
+  }
+
+  Future<void> _addDomainRule(SplitRule rule) async {
+    setState(() => _domainRules.add(rule));
+    await _splitTunnelStore.saveDomains(_domainRules);
+  }
+
+  Future<void> _toggleDomainRule(int index) async {
+    setState(() => _domainRules[index] = _domainRules[index].copyWith(excluded: !_domainRules[index].excluded));
+    await _splitTunnelStore.saveDomains(_domainRules);
+  }
+
+  Future<void> _removeDomainRule(int index) async {
+    setState(() => _domainRules.removeAt(index));
+    await _splitTunnelStore.saveDomains(_domainRules);
+  }
+
+  /// Domain rules get resolved to bypass CIDRs at connect time (Windows
+  /// only this round - see `_startTunnel`). `tun2proxy` only bypasses by
+  /// IP/CIDR, not by domain, so a literal IP/CIDR entry is used as-is and a
+  /// domain name gets DNS-resolved here first. A failed resolution just
+  /// skips that one rule (logged) instead of blocking the whole connect -
+  /// same philosophy as the "package not installed" handling on Android.
+  Future<List<String>> _resolveBypassCidrs() async {
+    final cidrs = <String>[];
+    for (final rule in _domainRules.where((r) => r.excluded)) {
+      final entry = rule.id.trim();
+      final host = entry.split('/').first;
+      if (InternetAddress.tryParse(host) != null) {
+        cidrs.add(entry.contains('/') ? entry : '$entry/32');
+        continue;
+      }
+      try {
+        final addresses = await InternetAddress.lookup(entry);
+        for (final addr in addresses) {
+          cidrs.add('${addr.address}/${addr.type == InternetAddressType.IPv6 ? 128 : 32}');
+        }
+      } catch (e) {
+        _pushLog('[app] gagal resolve domain $entry: $e');
+      }
+    }
+    return cidrs;
   }
 
   Future<void> _openProfileForm({ServerProfile? existing}) async {
@@ -339,6 +386,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
         proxyUrl: _localSocksProxy,
         serverIp: profile.serverIp,
         tunFd: fd,
+        bypassCidrs: const [],
       );
       setState(() => _tunnelRunning = true);
       _markConnected();
@@ -397,10 +445,12 @@ class _CharonHomePageState extends State<CharonHomePage> {
       return;
     }
     try {
+      final bypassCidrs = await _resolveBypassCidrs();
       await _bridge.startTunnel(
         proxyUrl: _localSocksProxy,
         serverIp: profile.serverIp,
         tunFd: null,
+        bypassCidrs: bypassCidrs,
       );
       setState(() => _tunnelRunning = true);
       _pushLog('[app] tunnel started');
@@ -492,6 +542,10 @@ class _CharonHomePageState extends State<CharonHomePage> {
           onAddApp: _addExcludedApp,
           onToggleApp: _toggleExcludedApp,
           onRemoveApp: _removeExcludedApp,
+          domains: _domainRules,
+          onAddDomain: _addDomainRule,
+          onToggleDomain: _toggleDomainRule,
+          onRemoveDomain: _removeDomainRule,
         );
       case 3:
         return FailsafeTab(

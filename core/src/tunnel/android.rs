@@ -1,9 +1,8 @@
-use std::str::FromStr;
 use std::sync::mpsc::Sender;
 
-use cidr::IpCidr;
 use tun2proxy::{ArgProxy, ArgVerbosity, Args, CancellationToken};
 
+use crate::tunnel::apply_bypass;
 use crate::AppEvent;
 
 pub struct TunnelHandle {
@@ -22,6 +21,7 @@ impl TunnelHandle {
         tun_fd: i32,
         proxy_url: &str,
         server_ip: &str,
+        bypass_cidrs: &[String],
         tx: Sender<AppEvent>,
     ) -> Result<Self, String> {
         let proxy = ArgProxy::try_from(proxy_url).map_err(|e| e.to_string())?;
@@ -31,9 +31,10 @@ impl TunnelHandle {
         args.close_fd_on_drop(true);
         // Same fix as the Windows path: exclude the VPN server's own IP from
         // TUN capture so xray's upstream connection doesn't loop back into
-        // itself through the tunnel.
-        let bypass_cidr = format!("{server_ip}/32");
-        args.bypass(IpCidr::from_str(&bypass_cidr).map_err(|e| e.to_string())?);
+        // itself through the tunnel. `bypass_cidrs` is always empty on
+        // Android for now - domain/CIDR split-tunnel rules are Windows-only
+        // this round (see `SplitTab` in the Flutter client).
+        apply_bypass(&mut args, server_ip, bypass_cidrs, &tx)?;
         args.verbosity(ArgVerbosity::Warn);
         let mtu = args.mtu;
 

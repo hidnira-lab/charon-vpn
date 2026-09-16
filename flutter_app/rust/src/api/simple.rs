@@ -104,8 +104,10 @@ impl CharonBridge {
         proxy_url: String,
         server_ip: String,
         tun_fd: Option<i32>,
+        bypass_cidrs: Vec<String>,
     ) -> Result<(), String> {
-        self.supervisor.start_tunnel(&proxy_url, &server_ip, tun_fd)
+        self.supervisor
+            .start_tunnel(&proxy_url, &server_ip, tun_fd, &bypass_cidrs)
     }
 
     pub fn stop_tunnel(&self) {

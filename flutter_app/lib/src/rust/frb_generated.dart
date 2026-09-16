@@ -102,6 +102,7 @@ abstract class RustLibApi extends BaseApi {
     required String proxyUrl,
     required String serverIp,
     int? tunFd,
+    required List<String> bypassCidrs,
   });
 
   Future<void> crateApiSimpleCharonBridgeStartXray({
@@ -281,6 +282,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     required String proxyUrl,
     required String serverIp,
     int? tunFd,
+    required List<String> bypassCidrs,
   }) {
     return handler.executeNormal(
       NormalTask(
@@ -293,6 +295,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(proxyUrl, serializer);
           sse_encode_String(serverIp, serializer);
           sse_encode_opt_box_autoadd_i_32(tunFd, serializer);
+          sse_encode_list_String(bypassCidrs, serializer);
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
@@ -305,7 +308,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeErrorData: sse_decode_String,
         ),
         constMeta: kCrateApiSimpleCharonBridgeStartTunnelConstMeta,
-        argValues: [that, proxyUrl, serverIp, tunFd],
+        argValues: [that, proxyUrl, serverIp, tunFd, bypassCidrs],
         apiImpl: this,
       ),
     );
@@ -314,7 +317,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiSimpleCharonBridgeStartTunnelConstMeta =>
       const TaskConstMeta(
         debugName: "CharonBridge_start_tunnel",
-        argNames: ["that", "proxyUrl", "serverIp", "tunFd"],
+        argNames: ["that", "proxyUrl", "serverIp", "tunFd", "bypassCidrs"],
       );
 
   @override
@@ -558,6 +561,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<String> dco_decode_list_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
@@ -697,6 +706,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   int sse_decode_i_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getInt32();
+  }
+
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <String>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
   }
 
   @protected
@@ -861,6 +882,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -958,11 +988,13 @@ class CharonBridgeImpl extends RustOpaque implements CharonBridge {
     required String proxyUrl,
     required String serverIp,
     int? tunFd,
+    required List<String> bypassCidrs,
   }) => RustLib.instance.api.crateApiSimpleCharonBridgeStartTunnel(
     that: this,
     proxyUrl: proxyUrl,
     serverIp: serverIp,
     tunFd: tunFd,
+    bypassCidrs: bypassCidrs,
   );
 
   Future<void> startXray({

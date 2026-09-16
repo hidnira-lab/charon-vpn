@@ -44,6 +44,7 @@ abstract class CharonBridge implements RustOpaqueInterface {
     required String proxyUrl,
     required String serverIp,
     int? tunFd,
+    required List<String> bypassCidrs,
   });
 
   Future<void> startXray({

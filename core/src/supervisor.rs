@@ -22,6 +22,7 @@ struct TunnelConfig {
     proxy_url: String,
     server_ip: String,
     tun_fd: Option<i32>,
+    bypass_cidrs: Vec<String>,
 }
 
 struct Inner {
@@ -111,14 +112,16 @@ impl Supervisor {
         proxy_url: &str,
         server_ip: &str,
         tun_fd: Option<i32>,
+        bypass_cidrs: &[String],
     ) -> Result<(), String> {
         self.0.manual_stop.store(false, Ordering::SeqCst);
         *self.0.tunnel_config.lock().unwrap() = Some(TunnelConfig {
             proxy_url: proxy_url.to_string(),
             server_ip: server_ip.to_string(),
             tun_fd,
+            bypass_cidrs: bypass_cidrs.to_vec(),
         });
-        self.spawn_tunnel(proxy_url, server_ip, tun_fd)
+        self.spawn_tunnel(proxy_url, server_ip, tun_fd, bypass_cidrs)
     }
 
     pub fn stop_tunnel(&self) {
@@ -139,7 +142,7 @@ impl Supervisor {
         server_ip: &str,
     ) -> Result<(), String> {
         self.start_xray(xray_path, config_path)?;
-        self.start_tunnel(proxy_url, server_ip, None)
+        self.start_tunnel(proxy_url, server_ip, None, &[])
     }
 
     pub fn disconnect(&self) {
@@ -168,7 +171,13 @@ impl Supervisor {
         Ok(())
     }
 
-    fn spawn_tunnel(&self, proxy_url: &str, server_ip: &str, tun_fd: Option<i32>) -> Result<(), String> {
+    fn spawn_tunnel(
+        &self,
+        proxy_url: &str,
+        server_ip: &str,
+        tun_fd: Option<i32>,
+        bypass_cidrs: &[String],
+    ) -> Result<(), String> {
         let mut guard = self.0.tunnel.lock().unwrap();
         if guard.is_some() {
             return Ok(());
@@ -176,11 +185,11 @@ impl Supervisor {
         #[cfg(windows)]
         let _ = tun_fd;
         #[cfg(windows)]
-        let handle = TunnelHandle::start(proxy_url, server_ip, self.0.internal_tx.clone())?;
+        let handle = TunnelHandle::start(proxy_url, server_ip, bypass_cidrs, self.0.internal_tx.clone())?;
         #[cfg(target_os = "android")]
         let handle = {
             let fd = tun_fd.ok_or_else(|| "tun_fd is required on Android".to_string())?;
-            TunnelHandle::start_with_fd(fd, proxy_url, server_ip, self.0.internal_tx.clone())?
+            TunnelHandle::start_with_fd(fd, proxy_url, server_ip, bypass_cidrs, self.0.internal_tx.clone())?
         };
         *guard = Some(handle);
         Ok(())
@@ -215,9 +224,12 @@ impl Supervisor {
                 // Give xray a moment to bind its local SOCKS port before the
                 // tunnel tries to dial it.
                 std::thread::sleep(Duration::from_millis(500));
-                if let Err(e) =
-                    sup.spawn_tunnel(&tunnel_cfg.proxy_url, &tunnel_cfg.server_ip, tunnel_cfg.tun_fd)
-                {
+                if let Err(e) = sup.spawn_tunnel(
+                    &tunnel_cfg.proxy_url,
+                    &tunnel_cfg.server_ip,
+                    tunnel_cfg.tun_fd,
+                    &tunnel_cfg.bypass_cidrs,
+                ) {
                     if let Some(mut proc) = sup.0.xray.lock().unwrap().take() {
                         proc.kill();
                     }

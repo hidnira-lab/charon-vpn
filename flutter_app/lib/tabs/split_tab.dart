@@ -7,12 +7,16 @@ import '../android_channel.dart';
 import '../design/design.dart';
 import '../split_tunnel.dart';
 
-/// Milestone 7 (Android): Applications rules are now persisted and actually
-/// excluded from the tunnel via `VpnService.Builder.addDisallowedApplication`
-/// on the next connect - see `CharonVpnService.kt`. Domains are still UI-only
-/// placeholders (local widget state, nothing persisted or excluded). Windows
-/// app-based exclude remains parked - needs Windows Filtering Platform, which
-/// has no turnkey Rust library yet.
+/// Milestone 7: Applications rules are real on Android (persisted, actually
+/// excluded via `VpnService.Builder.addDisallowedApplication` on the next
+/// connect - see `CharonVpnService.kt`); Windows app-based exclude remains
+/// parked, needs Windows Filtering Platform, which has no turnkey Rust
+/// library yet. Domains rules are real on Windows (persisted, resolved to
+/// IP/CIDR and bypassed via `tun2proxy`'s `Args::bypass` - see
+/// `_resolveBypassCidrs` in `main.dart`); Android doesn't apply them yet
+/// this round. Both sections persist rules on both platforms regardless of
+/// whether they're applied - see the per-section `note` for what's actually
+/// live.
 class SplitTab extends StatefulWidget {
   const SplitTab({
     super.key,
@@ -20,6 +24,10 @@ class SplitTab extends StatefulWidget {
     required this.onAddApp,
     required this.onToggleApp,
     required this.onRemoveApp,
+    required this.domains,
+    required this.onAddDomain,
+    required this.onToggleDomain,
+    required this.onRemoveDomain,
   });
 
   final List<SplitRule> apps;
@@ -27,13 +35,16 @@ class SplitTab extends StatefulWidget {
   final ValueChanged<int> onToggleApp;
   final ValueChanged<int> onRemoveApp;
 
+  final List<SplitRule> domains;
+  final ValueChanged<SplitRule> onAddDomain;
+  final ValueChanged<int> onToggleDomain;
+  final ValueChanged<int> onRemoveDomain;
+
   @override
   State<SplitTab> createState() => _SplitTabState();
 }
 
 class _SplitTabState extends State<SplitTab> {
-  final _domains = <SplitRule>[];
-
   Future<void> _openAddDialog({
     required String title,
     required String nameLabel,
@@ -108,6 +119,39 @@ class _SplitTabState extends State<SplitTab> {
     if (result != null) widget.onAddApp(result);
   }
 
+  Future<void> _openAddDomainDialog() async {
+    final controller = TextEditingController();
+    final result = await showDialog<SplitRule>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Exclude Domain'),
+        content: SizedBox(
+          width: 420,
+          child: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Domain atau CIDR',
+              hintText: 'mis. weixin.qq.com atau 10.0.0.0/24',
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Batal')),
+          FilledButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isEmpty) return;
+              Navigator.of(context).pop(SplitRule(name: value, id: value, excluded: true));
+            },
+            child: const Text('Tambah'),
+          ),
+        ],
+      ),
+    );
+    if (result != null) widget.onAddDomain(result);
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -125,16 +169,6 @@ class _SplitTabState extends State<SplitTab> {
             tone: HazardTone.caution,
             child: Text('EXCLUDED TRAFFIC EGRESSES ON THE LOCAL NETWORK — UNPROTECTED'),
           ),
-          const SizedBox(height: 8),
-          Text(
-            Platform.isAndroid
-                ? 'Applications dipilih dari app terinstall, yang di-EXCL bakal skip tunnel mulai koneksi '
-                    'berikutnya (perubahan nggak langsung ke-apply kalau tunnel lagi connected). Domains '
-                    'masih UI placeholder.'
-                : 'Applications exclude belum ada mekanismenya di Windows (nunggu Windows Filtering '
-                    'Platform). Domains masih UI placeholder.',
-            style: const TextStyle(color: CharonColors.muted, fontSize: 12),
-          ),
           const SizedBox(height: 24),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -144,6 +178,9 @@ class _SplitTabState extends State<SplitTab> {
                 codePrefix: 'APP',
                 items: widget.apps,
                 emptyHint: 'applications',
+                note: Platform.isAndroid
+                    ? 'Dipilih dari app terinstall. Bakal skip tunnel mulai koneksi berikutnya.'
+                    : 'Belum ada mekanismenya di Windows (nunggu Windows Filtering Platform).',
                 onAdd: _openAddAppDialog,
                 onToggle: widget.onToggleApp,
                 onRemove: widget.onRemoveApp,
@@ -152,18 +189,15 @@ class _SplitTabState extends State<SplitTab> {
                 heading: 'Domains',
                 icon: LucideIcons.globe,
                 codePrefix: 'DNS',
-                items: _domains,
+                items: widget.domains,
                 emptyHint: 'domains',
-                onAdd: () => _openAddDialog(
-                  title: 'Exclude Domain',
-                  nameLabel: 'Domain',
-                  idLabel: 'Match type',
-                  idHint: 'mis. dns',
-                  onSubmit: (r) => setState(() => _domains.add(r)),
-                ),
-                onToggle: (i) =>
-                    setState(() => _domains[i] = _domains[i].copyWith(excluded: !_domains[i].excluded)),
-                onRemove: (i) => setState(() => _domains.removeAt(i)),
+                note: Platform.isAndroid
+                    ? 'Rule kesimpen, belum diterapkan ke tunnel Android sesi ini.'
+                    : 'Domain di-resolve ke IP, IP/CIDR literal dipakai langsung — bypass tunnel mulai '
+                        'koneksi berikutnya.',
+                onAdd: _openAddDomainDialog,
+                onToggle: widget.onToggleDomain,
+                onRemove: widget.onRemoveDomain,
               );
               if (constraints.maxWidth >= 760) {
                 return Row(
@@ -187,6 +221,7 @@ class _RuleList extends StatelessWidget {
     required this.codePrefix,
     required this.items,
     required this.emptyHint,
+    required this.note,
     required this.onAdd,
     required this.onToggle,
     required this.onRemove,
@@ -197,6 +232,7 @@ class _RuleList extends StatelessWidget {
   final String codePrefix;
   final List<SplitRule> items;
   final String emptyHint;
+  final String note;
   final VoidCallback onAdd;
   final ValueChanged<int> onToggle;
   final ValueChanged<int> onRemove;
@@ -223,6 +259,8 @@ class _RuleList extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 4),
+        Text(note, style: const TextStyle(color: CharonColors.muted, fontSize: 11)),
         const SizedBox(height: 12),
         if (items.isEmpty)
           Container(
