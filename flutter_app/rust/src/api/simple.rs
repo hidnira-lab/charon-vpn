@@ -2,8 +2,7 @@ use std::path::Path;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 
-use charon_core::tunnel::TunnelHandle;
-use charon_core::xray::XrayProcess;
+use charon_core::supervisor::Supervisor;
 use charon_core::{log_bridge, AppEvent};
 use crate::frb_generated::StreamSink;
 use flutter_rust_bridge::frb;
@@ -17,6 +16,12 @@ pub enum CharonEvent {
     XrayLog(String),
     TunnelLog(String),
     TunnelStopped { ok: bool, message: Option<String> },
+    XrayStopped { code: Option<i32> },
+    /// Kill switch engaged: xray died unexpectedly, TUN deliberately left up
+    /// so all new connections fail closed until it reconnects.
+    Blocked,
+    Reconnecting,
+    Reconnected,
 }
 
 impl From<AppEvent> for CharonEvent {
@@ -32,35 +37,38 @@ impl From<AppEvent> for CharonEvent {
                 ok: false,
                 message: Some(e),
             },
+            AppEvent::XrayStopped(code) => CharonEvent::XrayStopped { code },
+            AppEvent::Blocked => CharonEvent::Blocked,
+            AppEvent::Reconnecting => CharonEvent::Reconnecting,
+            AppEvent::Reconnected => CharonEvent::Reconnected,
         }
     }
 }
 
 #[frb(opaque)]
 pub struct CharonBridge {
-    tx: mpsc::Sender<AppEvent>,
     rx: Mutex<Option<mpsc::Receiver<AppEvent>>>,
-    xray: Mutex<Option<XrayProcess>>,
-    tunnel: Arc<Mutex<Option<TunnelHandle>>>,
+    supervisor: Supervisor,
 }
 
 impl CharonBridge {
     #[frb(sync)]
     pub fn new() -> CharonBridge {
         let (tx, rx) = mpsc::channel();
+        let no_op_waker: charon_core::Waker = Arc::new(|| {});
+        log_bridge::init(tx.clone(), no_op_waker.clone());
         CharonBridge {
-            tx,
             rx: Mutex::new(Some(rx)),
-            xray: Mutex::new(None),
-            tunnel: Arc::new(Mutex::new(None)),
+            supervisor: Supervisor::new(tx, no_op_waker),
         }
     }
 
     /// Must be called exactly once per `CharonBridge` instance; forwards
-    /// every `AppEvent` (from xray, the tunnel, and the log bridge) to the
-    /// returned Dart stream for the lifetime of the app. Mirrors the egui
-    /// shell's `TunnelStopped` handling: clears the tunnel slot and kicks
-    /// off the Windows network-reset safety net before the event reaches Dart.
+    /// every `AppEvent` (xray/tunnel logs, connection lifecycle, kill-switch
+    /// and reconnect state) to the returned Dart stream for the lifetime of
+    /// the app. The supervisor already handles the Windows network-reset
+    /// safety net and reconnect decisions internally, so this is a plain
+    /// relay.
     pub fn events(&self, sink: StreamSink<CharonEvent>) {
         let rx = self
             .rx
@@ -68,16 +76,8 @@ impl CharonBridge {
             .unwrap()
             .take()
             .expect("events() called more than once on the same CharonBridge");
-        let tunnel = Arc::clone(&self.tunnel);
-        let tx = self.tx.clone();
-        log_bridge::init(self.tx.clone(), Arc::new(|| {}));
         std::thread::spawn(move || {
             while let Ok(event) = rx.recv() {
-                if let AppEvent::TunnelStopped(_) = &event {
-                    *tunnel.lock().unwrap() = None;
-                    #[cfg(windows)]
-                    charon_core::platform::windows_network_reset::run(tx.clone());
-                }
                 if sink.add(event.into()).is_err() {
                     break;
                 }
@@ -86,26 +86,12 @@ impl CharonBridge {
     }
 
     pub fn start_xray(&self, xray_path: String, config_path: String) -> Result<(), String> {
-        let mut guard = self.xray.lock().unwrap();
-        if guard.is_some() {
-            return Ok(());
-        }
-        let waker = Arc::new(|| {});
-        let proc = XrayProcess::spawn(
-            Path::new(&xray_path),
-            Path::new(&config_path),
-            self.tx.clone(),
-            waker,
-        )
-        .map_err(|e| e.to_string())?;
-        *guard = Some(proc);
-        Ok(())
+        self.supervisor
+            .start_xray(Path::new(&xray_path), Path::new(&config_path))
     }
 
     pub fn stop_xray(&self) {
-        if let Some(mut proc) = self.xray.lock().unwrap().take() {
-            proc.kill();
-        }
+        self.supervisor.stop_xray();
     }
 
     /// `tun_fd` is ignored on Windows (which manages its own wintun adapter)
@@ -119,27 +105,26 @@ impl CharonBridge {
         server_ip: String,
         tun_fd: Option<i32>,
     ) -> Result<(), String> {
-        let mut guard = self.tunnel.lock().unwrap();
-        if guard.is_some() {
-            return Ok(());
-        }
-        #[cfg(windows)]
-        let _ = &tun_fd;
-        #[cfg(windows)]
-        let handle = TunnelHandle::start(&proxy_url, &server_ip, self.tx.clone())?;
-        #[cfg(target_os = "android")]
-        let handle = {
-            let fd = tun_fd.ok_or_else(|| "tun_fd is required on Android".to_string())?;
-            TunnelHandle::start_with_fd(fd, &proxy_url, &server_ip, self.tx.clone())?
-        };
-        *guard = Some(handle);
-        Ok(())
+        self.supervisor.start_tunnel(&proxy_url, &server_ip, tun_fd)
     }
 
     pub fn stop_tunnel(&self) {
-        if let Some(handle) = self.tunnel.lock().unwrap().as_ref() {
-            handle.request_stop();
-        }
+        self.supervisor.stop_tunnel();
+    }
+
+    /// When on, an unexpected xray crash leaves the TUN adapter in place
+    /// (new connections fail closed) instead of tearing the tunnel down -
+    /// see `charon_core::supervisor::Supervisor` docs for the full picture,
+    /// including its one known gap (doesn't cover the TUN adapter itself
+    /// disappearing, only xray crashing under it).
+    pub fn set_kill_switch(&self, enabled: bool) {
+        self.supervisor.set_kill_switch(enabled);
+    }
+
+    /// When on, an unexpected xray or tunnel drop is retried automatically
+    /// (up to 5 attempts, 5s apart) instead of just reporting the failure.
+    pub fn set_auto_reconnect(&self, enabled: bool) {
+        self.supervisor.set_auto_reconnect(enabled);
     }
 }
 

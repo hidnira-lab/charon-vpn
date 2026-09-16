@@ -1,6 +1,7 @@
 pub mod events;
 pub mod log_bridge;
 pub mod platform;
+pub mod supervisor;
 pub mod tunnel;
 pub mod xray;
 

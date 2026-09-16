@@ -56,13 +56,17 @@ extension CharonEventPatterns on CharonEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( CharonEvent_XrayLog value)?  xrayLog,TResult Function( CharonEvent_TunnelLog value)?  tunnelLog,TResult Function( CharonEvent_TunnelStopped value)?  tunnelStopped,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( CharonEvent_XrayLog value)?  xrayLog,TResult Function( CharonEvent_TunnelLog value)?  tunnelLog,TResult Function( CharonEvent_TunnelStopped value)?  tunnelStopped,TResult Function( CharonEvent_XrayStopped value)?  xrayStopped,TResult Function( CharonEvent_Blocked value)?  blocked,TResult Function( CharonEvent_Reconnecting value)?  reconnecting,TResult Function( CharonEvent_Reconnected value)?  reconnected,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog() when xrayLog != null:
 return xrayLog(_that);case CharonEvent_TunnelLog() when tunnelLog != null:
 return tunnelLog(_that);case CharonEvent_TunnelStopped() when tunnelStopped != null:
-return tunnelStopped(_that);case _:
+return tunnelStopped(_that);case CharonEvent_XrayStopped() when xrayStopped != null:
+return xrayStopped(_that);case CharonEvent_Blocked() when blocked != null:
+return blocked(_that);case CharonEvent_Reconnecting() when reconnecting != null:
+return reconnecting(_that);case CharonEvent_Reconnected() when reconnected != null:
+return reconnected(_that);case _:
   return orElse();
 
 }
@@ -80,13 +84,17 @@ return tunnelStopped(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( CharonEvent_XrayLog value)  xrayLog,required TResult Function( CharonEvent_TunnelLog value)  tunnelLog,required TResult Function( CharonEvent_TunnelStopped value)  tunnelStopped,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( CharonEvent_XrayLog value)  xrayLog,required TResult Function( CharonEvent_TunnelLog value)  tunnelLog,required TResult Function( CharonEvent_TunnelStopped value)  tunnelStopped,required TResult Function( CharonEvent_XrayStopped value)  xrayStopped,required TResult Function( CharonEvent_Blocked value)  blocked,required TResult Function( CharonEvent_Reconnecting value)  reconnecting,required TResult Function( CharonEvent_Reconnected value)  reconnected,}){
 final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog():
 return xrayLog(_that);case CharonEvent_TunnelLog():
 return tunnelLog(_that);case CharonEvent_TunnelStopped():
-return tunnelStopped(_that);}
+return tunnelStopped(_that);case CharonEvent_XrayStopped():
+return xrayStopped(_that);case CharonEvent_Blocked():
+return blocked(_that);case CharonEvent_Reconnecting():
+return reconnecting(_that);case CharonEvent_Reconnected():
+return reconnected(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -100,13 +108,17 @@ return tunnelStopped(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( CharonEvent_XrayLog value)?  xrayLog,TResult? Function( CharonEvent_TunnelLog value)?  tunnelLog,TResult? Function( CharonEvent_TunnelStopped value)?  tunnelStopped,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( CharonEvent_XrayLog value)?  xrayLog,TResult? Function( CharonEvent_TunnelLog value)?  tunnelLog,TResult? Function( CharonEvent_TunnelStopped value)?  tunnelStopped,TResult? Function( CharonEvent_XrayStopped value)?  xrayStopped,TResult? Function( CharonEvent_Blocked value)?  blocked,TResult? Function( CharonEvent_Reconnecting value)?  reconnecting,TResult? Function( CharonEvent_Reconnected value)?  reconnected,}){
 final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog() when xrayLog != null:
 return xrayLog(_that);case CharonEvent_TunnelLog() when tunnelLog != null:
 return tunnelLog(_that);case CharonEvent_TunnelStopped() when tunnelStopped != null:
-return tunnelStopped(_that);case _:
+return tunnelStopped(_that);case CharonEvent_XrayStopped() when xrayStopped != null:
+return xrayStopped(_that);case CharonEvent_Blocked() when blocked != null:
+return blocked(_that);case CharonEvent_Reconnecting() when reconnecting != null:
+return reconnecting(_that);case CharonEvent_Reconnected() when reconnected != null:
+return reconnected(_that);case _:
   return null;
 
 }
@@ -123,12 +135,16 @@ return tunnelStopped(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String field0)?  xrayLog,TResult Function( String field0)?  tunnelLog,TResult Function( bool ok,  String? message)?  tunnelStopped,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String field0)?  xrayLog,TResult Function( String field0)?  tunnelLog,TResult Function( bool ok,  String? message)?  tunnelStopped,TResult Function( int? code)?  xrayStopped,TResult Function()?  blocked,TResult Function()?  reconnecting,TResult Function()?  reconnected,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog() when xrayLog != null:
 return xrayLog(_that.field0);case CharonEvent_TunnelLog() when tunnelLog != null:
 return tunnelLog(_that.field0);case CharonEvent_TunnelStopped() when tunnelStopped != null:
-return tunnelStopped(_that.ok,_that.message);case _:
+return tunnelStopped(_that.ok,_that.message);case CharonEvent_XrayStopped() when xrayStopped != null:
+return xrayStopped(_that.code);case CharonEvent_Blocked() when blocked != null:
+return blocked();case CharonEvent_Reconnecting() when reconnecting != null:
+return reconnecting();case CharonEvent_Reconnected() when reconnected != null:
+return reconnected();case _:
   return orElse();
 
 }
@@ -146,12 +162,16 @@ return tunnelStopped(_that.ok,_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String field0)  xrayLog,required TResult Function( String field0)  tunnelLog,required TResult Function( bool ok,  String? message)  tunnelStopped,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String field0)  xrayLog,required TResult Function( String field0)  tunnelLog,required TResult Function( bool ok,  String? message)  tunnelStopped,required TResult Function( int? code)  xrayStopped,required TResult Function()  blocked,required TResult Function()  reconnecting,required TResult Function()  reconnected,}) {final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog():
 return xrayLog(_that.field0);case CharonEvent_TunnelLog():
 return tunnelLog(_that.field0);case CharonEvent_TunnelStopped():
-return tunnelStopped(_that.ok,_that.message);}
+return tunnelStopped(_that.ok,_that.message);case CharonEvent_XrayStopped():
+return xrayStopped(_that.code);case CharonEvent_Blocked():
+return blocked();case CharonEvent_Reconnecting():
+return reconnecting();case CharonEvent_Reconnected():
+return reconnected();}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -165,12 +185,16 @@ return tunnelStopped(_that.ok,_that.message);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String field0)?  xrayLog,TResult? Function( String field0)?  tunnelLog,TResult? Function( bool ok,  String? message)?  tunnelStopped,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String field0)?  xrayLog,TResult? Function( String field0)?  tunnelLog,TResult? Function( bool ok,  String? message)?  tunnelStopped,TResult? Function( int? code)?  xrayStopped,TResult? Function()?  blocked,TResult? Function()?  reconnecting,TResult? Function()?  reconnected,}) {final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog() when xrayLog != null:
 return xrayLog(_that.field0);case CharonEvent_TunnelLog() when tunnelLog != null:
 return tunnelLog(_that.field0);case CharonEvent_TunnelStopped() when tunnelStopped != null:
-return tunnelStopped(_that.ok,_that.message);case _:
+return tunnelStopped(_that.ok,_that.message);case CharonEvent_XrayStopped() when xrayStopped != null:
+return xrayStopped(_that.code);case CharonEvent_Blocked() when blocked != null:
+return blocked();case CharonEvent_Reconnecting() when reconnecting != null:
+return reconnecting();case CharonEvent_Reconnected() when reconnected != null:
+return reconnected();case _:
   return null;
 
 }
@@ -383,5 +407,169 @@ as String?,
 
 
 }
+
+/// @nodoc
+
+
+class CharonEvent_XrayStopped extends CharonEvent {
+  const CharonEvent_XrayStopped({this.code}): super._();
+  
+
+ final  int? code;
+
+/// Create a copy of CharonEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CharonEvent_XrayStoppedCopyWith<CharonEvent_XrayStopped> get copyWith => _$CharonEvent_XrayStoppedCopyWithImpl<CharonEvent_XrayStopped>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is CharonEvent_XrayStopped&&(identical(other.code, code) || other.code == code));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,code);
+}
+
+@override
+String toString() {
+    return 'CharonEvent.xrayStopped(code: $code)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CharonEvent_XrayStoppedCopyWith<$Res> implements $CharonEventCopyWith<$Res> {
+  factory $CharonEvent_XrayStoppedCopyWith(CharonEvent_XrayStopped value, $Res Function(CharonEvent_XrayStopped) _then) = _$CharonEvent_XrayStoppedCopyWithImpl;
+@useResult
+$Res call({
+ int? code
+});
+
+
+
+
+}
+/// @nodoc
+class _$CharonEvent_XrayStoppedCopyWithImpl<$Res>
+    implements $CharonEvent_XrayStoppedCopyWith<$Res> {
+  _$CharonEvent_XrayStoppedCopyWithImpl(this._self, this._then);
+
+  final CharonEvent_XrayStopped _self;
+  final $Res Function(CharonEvent_XrayStopped) _then;
+
+/// Create a copy of CharonEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? code = freezed,}) {
+  return _then(CharonEvent_XrayStopped(
+code: freezed == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as int?,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class CharonEvent_Blocked extends CharonEvent {
+  const CharonEvent_Blocked(): super._();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is CharonEvent_Blocked);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'CharonEvent.blocked()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class CharonEvent_Reconnecting extends CharonEvent {
+  const CharonEvent_Reconnecting(): super._();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is CharonEvent_Reconnecting);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'CharonEvent.reconnecting()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class CharonEvent_Reconnected extends CharonEvent {
+  const CharonEvent_Reconnected(): super._();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is CharonEvent_Reconnected);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'CharonEvent.reconnected()';
+}
+
+
+}
+
+
+
 
 // dart format on

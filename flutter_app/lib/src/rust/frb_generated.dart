@@ -69,7 +69,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 444788787;
+  int get rustContentHash => 1126100458;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -86,6 +86,16 @@ abstract class RustLibApi extends BaseApi {
   });
 
   CharonBridge crateApiSimpleCharonBridgeNew();
+
+  Future<void> crateApiSimpleCharonBridgeSetAutoReconnect({
+    required CharonBridge that,
+    required bool enabled,
+  });
+
+  Future<void> crateApiSimpleCharonBridgeSetKillSwitch({
+    required CharonBridge that,
+    required bool enabled,
+  });
 
   Future<void> crateApiSimpleCharonBridgeStartTunnel({
     required CharonBridge that,
@@ -190,6 +200,82 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "CharonBridge_new", argNames: []);
 
   @override
+  Future<void> crateApiSimpleCharonBridgeSetAutoReconnect({
+    required CharonBridge that,
+    required bool enabled,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCharonBridge(
+            that,
+            serializer,
+          );
+          sse_encode_bool(enabled, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSimpleCharonBridgeSetAutoReconnectConstMeta,
+        argValues: [that, enabled],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSimpleCharonBridgeSetAutoReconnectConstMeta =>
+      const TaskConstMeta(
+        debugName: "CharonBridge_set_auto_reconnect",
+        argNames: ["that", "enabled"],
+      );
+
+  @override
+  Future<void> crateApiSimpleCharonBridgeSetKillSwitch({
+    required CharonBridge that,
+    required bool enabled,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCharonBridge(
+            that,
+            serializer,
+          );
+          sse_encode_bool(enabled, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 4,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiSimpleCharonBridgeSetKillSwitchConstMeta,
+        argValues: [that, enabled],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSimpleCharonBridgeSetKillSwitchConstMeta =>
+      const TaskConstMeta(
+        debugName: "CharonBridge_set_kill_switch",
+        argNames: ["that", "enabled"],
+      );
+
+  @override
   Future<void> crateApiSimpleCharonBridgeStartTunnel({
     required CharonBridge that,
     required String proxyUrl,
@@ -210,7 +296,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 5,
             port: port_,
           );
         },
@@ -250,7 +336,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 6,
             port: port_,
           );
         },
@@ -286,7 +372,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 7,
             port: port_,
           );
         },
@@ -322,7 +408,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 8,
             port: port_,
           );
         },
@@ -352,7 +438,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 9,
             port: port_,
           );
         },
@@ -450,6 +536,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           ok: dco_decode_bool(raw[1]),
           message: dco_decode_opt_String(raw[2]),
         );
+      case 3:
+        return CharonEvent_XrayStopped(
+          code: dco_decode_opt_box_autoadd_i_32(raw[1]),
+        );
+      case 4:
+        return CharonEvent_Blocked();
+      case 5:
+        return CharonEvent_Reconnecting();
+      case 6:
+        return CharonEvent_Reconnected();
       default:
         throw Exception("unreachable");
     }
@@ -583,6 +679,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         var var_ok = sse_decode_bool(deserializer);
         var var_message = sse_decode_opt_String(deserializer);
         return CharonEvent_TunnelStopped(ok: var_ok, message: var_message);
+      case 3:
+        var var_code = sse_decode_opt_box_autoadd_i_32(deserializer);
+        return CharonEvent_XrayStopped(code: var_code);
+      case 4:
+        return CharonEvent_Blocked();
+      case 5:
+        return CharonEvent_Reconnecting();
+      case 6:
+        return CharonEvent_Reconnected();
       default:
         throw UnimplementedError('');
     }
@@ -737,6 +842,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_32(2, serializer);
         sse_encode_bool(ok, serializer);
         sse_encode_opt_String(message, serializer);
+      case CharonEvent_XrayStopped(code: final code):
+        sse_encode_i_32(3, serializer);
+        sse_encode_opt_box_autoadd_i_32(code, serializer);
+      case CharonEvent_Blocked():
+        sse_encode_i_32(4, serializer);
+      case CharonEvent_Reconnecting():
+        sse_encode_i_32(5, serializer);
+      case CharonEvent_Reconnected():
+        sse_encode_i_32(6, serializer);
     }
   }
 
@@ -814,12 +928,26 @@ class CharonBridgeImpl extends RustOpaque implements CharonBridge {
   );
 
   /// Must be called exactly once per `CharonBridge` instance; forwards
-  /// every `AppEvent` (from xray, the tunnel, and the log bridge) to the
-  /// returned Dart stream for the lifetime of the app. Mirrors the egui
-  /// shell's `TunnelStopped` handling: clears the tunnel slot and kicks
-  /// off the Windows network-reset safety net before the event reaches Dart.
+  /// every `AppEvent` (xray/tunnel logs, connection lifecycle, kill-switch
+  /// and reconnect state) to the returned Dart stream for the lifetime of
+  /// the app. The supervisor already handles the Windows network-reset
+  /// safety net and reconnect decisions internally, so this is a plain
+  /// relay.
   Stream<CharonEvent> events() =>
       RustLib.instance.api.crateApiSimpleCharonBridgeEvents(that: this);
+
+  /// When on, an unexpected xray or tunnel drop is retried automatically
+  /// (up to 5 attempts, 5s apart) instead of just reporting the failure.
+  Future<void> setAutoReconnect({required bool enabled}) => RustLib.instance.api
+      .crateApiSimpleCharonBridgeSetAutoReconnect(that: this, enabled: enabled);
+
+  /// When on, an unexpected xray crash leaves the TUN adapter in place
+  /// (new connections fail closed) instead of tearing the tunnel down -
+  /// see `charon_core::supervisor::Supervisor` docs for the full picture,
+  /// including its one known gap (doesn't cover the TUN adapter itself
+  /// disappearing, only xray crashing under it).
+  Future<void> setKillSwitch({required bool enabled}) => RustLib.instance.api
+      .crateApiSimpleCharonBridgeSetKillSwitch(that: this, enabled: enabled);
 
   /// `tun_fd` is ignored on Windows (which manages its own wintun adapter)
   /// and required on Android (the fd comes from `VpnService.Builder.establish()`

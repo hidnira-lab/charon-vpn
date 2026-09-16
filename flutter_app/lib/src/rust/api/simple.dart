@@ -14,14 +14,26 @@ part 'simple.freezed.dart';
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<CharonBridge>>
 abstract class CharonBridge implements RustOpaqueInterface {
   /// Must be called exactly once per `CharonBridge` instance; forwards
-  /// every `AppEvent` (from xray, the tunnel, and the log bridge) to the
-  /// returned Dart stream for the lifetime of the app. Mirrors the egui
-  /// shell's `TunnelStopped` handling: clears the tunnel slot and kicks
-  /// off the Windows network-reset safety net before the event reaches Dart.
+  /// every `AppEvent` (xray/tunnel logs, connection lifecycle, kill-switch
+  /// and reconnect state) to the returned Dart stream for the lifetime of
+  /// the app. The supervisor already handles the Windows network-reset
+  /// safety net and reconnect decisions internally, so this is a plain
+  /// relay.
   Stream<CharonEvent> events();
 
   factory CharonBridge() =>
       RustLib.instance.api.crateApiSimpleCharonBridgeNew();
+
+  /// When on, an unexpected xray or tunnel drop is retried automatically
+  /// (up to 5 attempts, 5s apart) instead of just reporting the failure.
+  Future<void> setAutoReconnect({required bool enabled});
+
+  /// When on, an unexpected xray crash leaves the TUN adapter in place
+  /// (new connections fail closed) instead of tearing the tunnel down -
+  /// see `charon_core::supervisor::Supervisor` docs for the full picture,
+  /// including its one known gap (doesn't cover the TUN adapter itself
+  /// disappearing, only xray crashing under it).
+  Future<void> setKillSwitch({required bool enabled});
 
   /// `tun_fd` is ignored on Windows (which manages its own wintun adapter)
   /// and required on Android (the fd comes from `VpnService.Builder.establish()`
@@ -52,4 +64,11 @@ sealed class CharonEvent with _$CharonEvent {
   const factory CharonEvent.tunnelLog(String field0) = CharonEvent_TunnelLog;
   const factory CharonEvent.tunnelStopped({required bool ok, String? message}) =
       CharonEvent_TunnelStopped;
+  const factory CharonEvent.xrayStopped({int? code}) = CharonEvent_XrayStopped;
+
+  /// Kill switch engaged: xray died unexpectedly, TUN deliberately left up
+  /// so all new connections fail closed until it reconnects.
+  const factory CharonEvent.blocked() = CharonEvent_Blocked;
+  const factory CharonEvent.reconnecting() = CharonEvent_Reconnecting;
+  const factory CharonEvent.reconnected() = CharonEvent_Reconnected;
 }
