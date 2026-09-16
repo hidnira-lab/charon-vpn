@@ -7,8 +7,17 @@ import 'package:flutter_app/src/rust/api/simple.dart';
 import 'package:flutter_app/src/rust/frb_generated.dart';
 
 import 'app_settings.dart';
-import 'profiles_page.dart';
+import 'design/design.dart';
+import 'profile_form_dialog.dart';
 import 'server_profiles.dart';
+import 'tabs/config_tab.dart';
+import 'tabs/dashboard_tab.dart';
+import 'tabs/devices_tab.dart';
+import 'tabs/failsafe_tab.dart';
+import 'tabs/nodes_tab.dart';
+import 'tabs/split_tab.dart';
+import 'tabs/telemetry_tab.dart';
+import 'vless_link.dart';
 
 const _maxLogLines = 500;
 const _localSocksProxy = 'socks5://127.0.0.1:10808';
@@ -39,6 +48,7 @@ class CharonApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Charon VPN',
+      theme: CharonTheme.dark(),
       home: const CharonHomePage(),
     );
   }
@@ -58,23 +68,36 @@ class _CharonHomePageState extends State<CharonHomePage> {
   final _logs = <String>[];
   final _scrollController = ScrollController();
   StreamSubscription<CharonEvent>? _eventSub;
+  Timer? _sessionTicker;
 
   List<ServerProfile> _profiles = [];
   String? _activeProfileId;
 
+  int _selectedIndex = 0;
   bool _xrayRunning = false;
   bool _tunnelRunning = false;
   bool _blocked = false;
   bool _reconnecting = false;
+  bool _connecting = false;
   bool _killSwitch = false;
   bool _autoReconnect = false;
   bool _autoConnect = false;
+
+  DateTime? _connectedAt;
+  Duration _elapsed = Duration.zero;
 
   ServerProfile? get _activeProfile {
     for (final profile in _profiles) {
       if (profile.id == _activeProfileId) return profile;
     }
     return null;
+  }
+
+  ConnState get _connState {
+    if (_reconnecting) return ConnState.reconnecting;
+    if (_connecting) return ConnState.connecting;
+    if (_xrayRunning && _tunnelRunning && !_blocked) return ConnState.connected;
+    return ConnState.disconnected;
   }
 
   @override
@@ -84,6 +107,11 @@ class _CharonHomePageState extends State<CharonHomePage> {
     if (Platform.isAndroid) {
       _androidVpnChannel.setMethodCallHandler(_onAndroidChannelCall);
     }
+    _sessionTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_connectedAt != null) {
+        setState(() => _elapsed = DateTime.now().difference(_connectedAt!));
+      }
+    });
     _bootstrap();
   }
 
@@ -95,10 +123,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
     final autoConnect = await _appSettings.loadAutoConnect();
     setState(() => _autoConnect = autoConnect);
     if (autoConnect && _activeProfile != null) {
-      await _startXray();
-      if (_xrayRunning) {
-        await _startTunnel();
-      }
+      await _engage();
     }
   }
 
@@ -110,6 +135,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
   @override
   void dispose() {
     _eventSub?.cancel();
+    _sessionTicker?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -147,15 +173,76 @@ class _CharonHomePageState extends State<CharonHomePage> {
     );
   }
 
-  Future<void> _openProfiles() async {
-    await Navigator.of(context).push(MaterialPageRoute(
-      builder: (context) => ProfilesPage(
-        profiles: _profiles,
-        activeId: _activeProfileId,
-        locked: _xrayRunning || _tunnelRunning,
+  Future<void> _selectProfile(String id) async {
+    if (_xrayRunning || _tunnelRunning) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Disconnect dulu buat ganti server profile aktif.')),
+      );
+      return;
+    }
+    setState(() => _activeProfileId = id);
+    await _profileStore.save(_profiles, _activeProfileId);
+  }
+
+  Future<void> _deleteProfile(ServerProfile profile) async {
+    if (profile.id == _activeProfileId && (_xrayRunning || _tunnelRunning)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Disconnect dulu buat hapus profile yang lagi aktif.')),
+      );
+      return;
+    }
+    setState(() {
+      _profiles.removeWhere((p) => p.id == profile.id);
+      if (_activeProfileId == profile.id) {
+        _activeProfileId = _profiles.isNotEmpty ? _profiles.first.id : null;
+      }
+    });
+    await _profileStore.save(_profiles, _activeProfileId);
+  }
+
+  Future<void> _openProfileForm({ServerProfile? existing}) async {
+    final result = await showDialog<ServerProfile>(
+      context: context,
+      builder: (context) => ProfileFormDialog(existing: existing),
+    );
+    if (result == null) return;
+    setState(() {
+      final index = _profiles.indexWhere((p) => p.id == result.id);
+      if (index >= 0) {
+        _profiles[index] = result;
+      } else {
+        _profiles.add(result);
+        _activeProfileId ??= result.id;
+      }
+    });
+    await _profileStore.save(_profiles, _activeProfileId);
+  }
+
+  Future<void> _importFromLink() async {
+    final controller = TextEditingController();
+    final link = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Import dari vless:// link'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'vless://uuid@host:port?...'),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Batal')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(controller.text), child: const Text('Import')),
+        ],
       ),
-    ));
-    await _loadProfiles();
+    );
+    if (link == null || link.trim().isEmpty) return;
+    final parsed = profileFromVlessLink(link);
+    if (parsed == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link vless:// nggak valid.')));
+      return;
+    }
+    await _openProfileForm(existing: parsed);
   }
 
   void _pushLog(String line) {
@@ -172,6 +259,18 @@ class _CharonHomePageState extends State<CharonHomePage> {
     });
   }
 
+  void _markConnected() {
+    if (_connectedAt != null) return;
+    setState(() => _connectedAt = DateTime.now());
+  }
+
+  void _markDisconnected() {
+    setState(() {
+      _connectedAt = null;
+      _elapsed = Duration.zero;
+    });
+  }
+
   void _onEvent(CharonEvent event) {
     switch (event) {
       case CharonEvent_XrayLog(:final field0):
@@ -180,9 +279,11 @@ class _CharonHomePageState extends State<CharonHomePage> {
         _pushLog(field0);
       case CharonEvent_TunnelStopped(:final ok, :final message):
         setState(() => _tunnelRunning = false);
+        _markDisconnected();
         _pushLog(ok ? '[app] tunnel exited' : '[app] tunnel error: $message');
       case CharonEvent_XrayStopped(:final code):
         setState(() => _xrayRunning = false);
+        _markDisconnected();
         _pushLog('[app] xray stopped unexpectedly (code: ${code ?? "?"})');
       case CharonEvent_Blocked():
         setState(() => _blocked = true);
@@ -197,6 +298,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
           _xrayRunning = true;
           _tunnelRunning = true;
         });
+        _markConnected();
         _pushLog('[app] reconnected');
     }
   }
@@ -219,6 +321,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
         tunFd: fd,
       );
       setState(() => _tunnelRunning = true);
+      _markConnected();
       _pushLog('[app] tunnel started (fd=$fd)');
     } catch (e) {
       _pushLog('[app] failed to start tunnel: $e');
@@ -285,6 +388,14 @@ class _CharonHomePageState extends State<CharonHomePage> {
     }
   }
 
+  Future<void> _stopTunnel() async {
+    await _bridge.stopTunnel();
+    if (Platform.isAndroid) {
+      await _androidVpnChannel.invokeMethod('stop');
+    }
+    _pushLog('[app] tunnel stopping...');
+  }
+
   Future<void> _setKillSwitch(bool enabled) async {
     await _bridge.setKillSwitch(enabled: enabled);
     setState(() => _killSwitch = enabled);
@@ -295,109 +406,100 @@ class _CharonHomePageState extends State<CharonHomePage> {
     setState(() => _autoReconnect = enabled);
   }
 
-  Future<void> _stopTunnel() async {
-    await _bridge.stopTunnel();
-    if (Platform.isAndroid) {
-      await _androidVpnChannel.invokeMethod('stop');
+  Future<void> _engage() async {
+    if (_activeProfile == null) {
+      _pushLog('[app] no server profile selected');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pilih server profile dulu di tab Nodes.')),
+        );
+      }
+      return;
     }
-    _pushLog('[app] tunnel stopping...');
+    setState(() => _connecting = true);
+    await _startXray();
+    if (_xrayRunning) {
+      await _startTunnel();
+    }
+    if (_xrayRunning && _tunnelRunning) _markConnected();
+    setState(() => _connecting = false);
+  }
+
+  Future<void> _disengage() async {
+    await _stopTunnel();
+    await _stopXray();
+    _markDisconnected();
+  }
+
+  void _onToggleConnection() {
+    switch (_connState) {
+      case ConnState.connected:
+        _disengage();
+      case ConnState.disconnected:
+        _engage();
+      case ConnState.connecting:
+      case ConnState.reconnecting:
+        break; // button is disabled while pulsing
+    }
+  }
+
+  void _onNavSelect(int index) {
+    setState(() => _selectedIndex = index);
+  }
+
+  String _formatElapsed(Duration d) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(d.inHours)}:${two(d.inMinutes % 60)}:${two(d.inSeconds % 60)}';
+  }
+
+  Widget _buildBody() {
+    switch (_selectedIndex) {
+      case 1:
+        return NodesTab(
+          profiles: _profiles,
+          activeId: _activeProfileId,
+          locked: _xrayRunning || _tunnelRunning,
+          onSelect: _selectProfile,
+          onAdd: () => _openProfileForm(),
+          onEdit: (p) => _openProfileForm(existing: p),
+          onDelete: _deleteProfile,
+          onImportLink: _importFromLink,
+        );
+      case 2:
+        return const SplitTab();
+      case 3:
+        return FailsafeTab(
+          killSwitch: _killSwitch,
+          onKillSwitchChanged: _setKillSwitch,
+          autoReconnect: _autoReconnect,
+          onAutoReconnectChanged: _setAutoReconnect,
+        );
+      case 4:
+        return TelemetryTab(logs: _logs, scrollController: _scrollController);
+      case 5:
+        return const DevicesTab();
+      case 6:
+        return ConfigTab(autoConnect: _autoConnect, onAutoConnectChanged: _setAutoConnectPref);
+      case 0:
+      default:
+        return DashboardTab(
+          state: _connState,
+          blocked: _blocked,
+          hasProfile: _activeProfile != null,
+          activeProfileName: _activeProfile?.name,
+          activeProfileIp: _activeProfile?.serverIp,
+          sessionLabel: _formatElapsed(_elapsed),
+          onToggle: _onToggleConnection,
+        );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Charon VPN'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.dns),
-            tooltip: 'Server Profiles',
-            onPressed: _openProfiles,
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Server: ${_activeProfile?.name ?? '(belum ada profile)'}'),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Text(_xrayRunning ? 'xray: Running' : 'xray: Stopped'),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: _xrayRunning ? _stopXray : _startXray,
-                  child: Text(_xrayRunning ? 'Stop xray' : 'Start xray'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Text(_tunnelRunning ? 'tunnel: Running' : 'tunnel: Stopped'),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: !_xrayRunning
-                      ? null
-                      : (_tunnelRunning ? _stopTunnel : _startTunnel),
-                  child: Text(_tunnelRunning ? 'Stop Tunnel' : 'Start Tunnel'),
-                ),
-              ],
-            ),
-            if (_blocked)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text(
-                  'Blocked by kill switch — internet paused until xray reconnects.',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-            if (_reconnecting)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Text('Reconnecting...', style: TextStyle(color: Colors.orange)),
-              ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Text('Kill switch'),
-                Switch(value: _killSwitch, onChanged: _setKillSwitch),
-                const SizedBox(width: 16),
-                const Text('Auto-reconnect'),
-                Switch(value: _autoReconnect, onChanged: _setAutoReconnect),
-              ],
-            ),
-            Row(
-              children: [
-                const Text('Auto-connect saat app dibuka'),
-                Switch(value: _autoConnect, onChanged: _setAutoConnectPref),
-              ],
-            ),
-            const Divider(),
-            const Text('Log:'),
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                color: Colors.black87,
-                child: ListView.builder(
-                  controller: _scrollController,
-                  itemCount: _logs.length,
-                  itemBuilder: (context, index) => Text(
-                    _logs[index],
-                    style: const TextStyle(
-                      fontFamily: 'monospace',
-                      color: Colors.white,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return CharonNavShell(
+      selectedIndex: _selectedIndex,
+      onSelect: _onNavSelect,
+      body: _buildBody(),
     );
   }
 }
