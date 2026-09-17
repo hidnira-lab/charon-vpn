@@ -21,13 +21,16 @@ use tun2proxy::Args;
 #[cfg(any(windows, target_os = "android"))]
 use crate::AppEvent;
 
-/// Bypasses the VPN server's own IP (always - prevents the routing loop
-/// documented on both platform impls) plus any extra CIDRs the caller wants
-/// excluded from the tunnel (split-tunnel domain/CIDR rules, Windows-only
-/// for now - see `SplitTab` in the Flutter client). Entries that fail to
-/// parse are skipped and logged rather than aborting the whole connect -
-/// the Dart side already validates/resolves these before sending them down,
-/// so a bad entry here would only come from an edge case it missed.
+/// Bypasses the VPN server's own IP (always - prevents the routing loop on
+/// Windows; a documented no-op on Android, see `android.rs`) plus any extra
+/// CIDRs the caller wants excluded from the tunnel (split-tunnel domain/CIDR
+/// rules - real on Windows via this function, real on Android via
+/// `Builder.excludeRoute()` in `CharonVpnService.kt` instead, since
+/// tun2proxy's own bypass mechanism doesn't run on Android - see
+/// `android.rs`). Entries that fail to parse are skipped and logged rather
+/// than aborting the whole connect - the Dart side already
+/// validates/resolves these before sending them down, so a bad entry here
+/// would only come from an edge case it missed.
 #[cfg(any(windows, target_os = "android"))]
 pub(crate) fn apply_bypass(
     args: &mut Args,

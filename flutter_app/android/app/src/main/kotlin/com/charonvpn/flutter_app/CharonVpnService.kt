@@ -4,9 +4,11 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Intent
+import android.net.IpPrefix
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
+import java.net.InetAddress
 
 class CharonVpnService : VpnService() {
     companion object {
@@ -58,6 +60,29 @@ class CharonVpnService : VpnService() {
                 builder.addDisallowedApplication(pkg)
             } catch (e: android.content.pm.PackageManager.NameNotFoundException) {
                 android.util.Log.w("CharonVpnService", "split-tunnel: package not installed, skipped: $pkg")
+            }
+        }
+
+        // Domain/CIDR split-tunnel exclusions (Milestone 7 part 2). This is
+        // Android-native routing, NOT `tun2proxy`'s `Args::bypass` - that
+        // mechanism only wires into `tproxy-config`'s OS route manipulation
+        // on Linux/Windows/macOS (see `general_api.rs` in the tun2proxy
+        // crate), so on Android it's a silent no-op even though the Rust
+        // call succeeds. `Builder.excludeRoute()` needs API 33+ (Android
+        // 13); older devices just log and keep routing that CIDR through
+        // the tunnel, same "degrade, don't block connect" philosophy as
+        // the package-exclusion loop above.
+        val userExcludedCidrs = intent?.getStringArrayListExtra("excludedCidrs") ?: arrayListOf()
+        for (cidr in userExcludedCidrs) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                android.util.Log.w("CharonVpnService", "split-tunnel: excludeRoute needs Android 13+, skipped: $cidr")
+                continue
+            }
+            try {
+                val (host, prefixLen) = cidr.split("/").let { it[0] to it[1].toInt() }
+                builder.excludeRoute(IpPrefix(InetAddress.getByName(host), prefixLen))
+            } catch (e: Exception) {
+                android.util.Log.w("CharonVpnService", "split-tunnel: invalid CIDR, skipped: $cidr ($e)")
             }
         }
 

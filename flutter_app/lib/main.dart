@@ -240,12 +240,13 @@ class _CharonHomePageState extends State<CharonHomePage> {
     await _splitTunnelStore.saveDomains(_domainRules);
   }
 
-  /// Domain rules get resolved to bypass CIDRs at connect time (Windows
-  /// only this round - see `_startTunnel`). `tun2proxy` only bypasses by
-  /// IP/CIDR, not by domain, so a literal IP/CIDR entry is used as-is and a
-  /// domain name gets DNS-resolved here first. A failed resolution just
-  /// skips that one rule (logged) instead of blocking the whole connect -
-  /// same philosophy as the "package not installed" handling on Android.
+  /// Domain rules get resolved to bypass CIDRs at connect time on both
+  /// platforms (Windows via `_startTunnel`, Android via
+  /// `_onAndroidChannelCall`). `tun2proxy` only bypasses by IP/CIDR, not by
+  /// domain, so a literal IP/CIDR entry is used as-is and a domain name gets
+  /// DNS-resolved here first. A failed resolution just skips that one rule
+  /// (logged) instead of blocking the whole connect - same philosophy as the
+  /// "package not installed" handling on Android app excludes.
   Future<List<String>> _resolveBypassCidrs() async {
     final cidrs = <String>[];
     for (final rule in _domainRules.where((r) => r.excluded)) {
@@ -382,11 +383,12 @@ class _CharonHomePageState extends State<CharonHomePage> {
       return;
     }
     try {
+      final bypassCidrs = await _resolveBypassCidrs();
       await _bridge.startTunnel(
         proxyUrl: _localSocksProxy,
         serverIp: profile.serverIp,
         tunFd: fd,
-        bypassCidrs: const [],
+        bypassCidrs: bypassCidrs,
       );
       setState(() => _tunnelRunning = true);
       _markConnected();
@@ -433,7 +435,11 @@ class _CharonHomePageState extends State<CharonHomePage> {
       // `_onAndroidChannelCall` once the fd is established asynchronously.
       try {
         final excludedPackages = _excludedApps.where((r) => r.excluded).map((r) => r.id).toList();
-        await androidVpnChannel.invokeMethod('prepareAndStart', {'excludedPackages': excludedPackages});
+        final excludedCidrs = await _resolveBypassCidrs();
+        await androidVpnChannel.invokeMethod(
+          'prepareAndStart',
+          {'excludedPackages': excludedPackages, 'excludedCidrs': excludedCidrs},
+        );
       } catch (e) {
         _pushLog('[app] VPN permission not granted: $e');
       }

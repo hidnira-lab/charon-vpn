@@ -11,12 +11,14 @@ import '../split_tunnel.dart';
 /// excluded via `VpnService.Builder.addDisallowedApplication` on the next
 /// connect - see `CharonVpnService.kt`); Windows app-based exclude remains
 /// parked, needs Windows Filtering Platform, which has no turnkey Rust
-/// library yet. Domains rules are real on Windows (persisted, resolved to
-/// IP/CIDR and bypassed via `tun2proxy`'s `Args::bypass` - see
-/// `_resolveBypassCidrs` in `main.dart`); Android doesn't apply them yet
-/// this round. Both sections persist rules on both platforms regardless of
-/// whether they're applied - see the per-section `note` for what's actually
-/// live.
+/// library yet. Domains rules are real on both platforms, but via different
+/// mechanisms - both resolve domains to IP/CIDR via `_resolveBypassCidrs` in
+/// `main.dart`, then Windows bypasses via `tun2proxy`'s `Args::bypass` (see
+/// `_startTunnel`) while Android bypasses via `VpnService.Builder.
+/// excludeRoute()` (API 33+; see `CharonVpnService.kt`) because tun2proxy's
+/// own bypass mechanism is a no-op on Android. Both sections persist rules
+/// on both platforms regardless of whether they're applied - see the
+/// per-section `note` for what's actually live.
 class SplitTab extends StatefulWidget {
   const SplitTab({
     super.key,
@@ -191,10 +193,8 @@ class _SplitTabState extends State<SplitTab> {
                 codePrefix: 'DNS',
                 items: widget.domains,
                 emptyHint: 'domains',
-                note: Platform.isAndroid
-                    ? 'Rule kesimpen, belum diterapkan ke tunnel Android sesi ini.'
-                    : 'Domain di-resolve ke IP, IP/CIDR literal dipakai langsung — bypass tunnel mulai '
-                        'koneksi berikutnya.',
+                note: 'Domain di-resolve ke IP, IP/CIDR literal dipakai langsung — bypass tunnel mulai '
+                    'koneksi berikutnya.',
                 onAdd: _openAddDomainDialog,
                 onToggle: widget.onToggleDomain,
                 onRemove: widget.onRemoveDomain,

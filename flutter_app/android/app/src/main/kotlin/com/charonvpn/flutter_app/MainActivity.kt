@@ -20,6 +20,7 @@ class MainActivity : FlutterActivity() {
     // (permission dialog), since the Intent extra has to be attached to
     // whichever Intent actually launches CharonVpnService.
     private var excludedPackages: ArrayList<String> = arrayListOf()
+    private var excludedCidrs: ArrayList<String> = arrayListOf()
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -51,6 +52,8 @@ class MainActivity : FlutterActivity() {
                 "prepareAndStart" -> {
                     @Suppress("UNCHECKED_CAST")
                     excludedPackages = ArrayList(call.argument<List<String>>("excludedPackages") ?: emptyList())
+                    @Suppress("UNCHECKED_CAST")
+                    excludedCidrs = ArrayList(call.argument<List<String>>("excludedCidrs") ?: emptyList())
                     val intent = VpnService.prepare(this)
                     if (intent != null) {
                         prepareResult = result
@@ -75,6 +78,7 @@ class MainActivity : FlutterActivity() {
     private fun startVpnService() {
         val intent = Intent(this, CharonVpnService::class.java)
         intent.putStringArrayListExtra("excludedPackages", excludedPackages)
+        intent.putStringArrayListExtra("excludedCidrs", excludedCidrs)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent)
         } else {

@@ -29,11 +29,18 @@ impl TunnelHandle {
         args.proxy(proxy);
         args.tun_fd(Some(tun_fd));
         args.close_fd_on_drop(true);
-        // Same fix as the Windows path: exclude the VPN server's own IP from
-        // TUN capture so xray's upstream connection doesn't loop back into
-        // itself through the tunnel. `bypass_cidrs` is always empty on
-        // Android for now - domain/CIDR split-tunnel rules are Windows-only
-        // this round (see `SplitTab` in the Flutter client).
+        // NOTE: unlike Windows, this call is a no-op on Android for both the
+        // server IP and any extra `bypass_cidrs` - tun2proxy's `Args::bypass`
+        // only wires into `tproxy-config`'s OS routing setup on
+        // linux/windows/macos (see `general_api.rs` in the tun2proxy crate),
+        // so nothing here actually changes what reaches this TUN fd. Kept
+        // for API parity with the Windows path and in case a future
+        // tun2proxy version adds Android support. The routing-loop fix that
+        // actually matters on Android is `Builder.addDisallowedApplication`
+        // in `CharonVpnService.kt` (excludes the whole app, including the
+        // xray subprocess, at the OS level); domain/CIDR split-tunnel
+        // exclusion for Android is likewise done natively via
+        // `Builder.excludeRoute()` in `CharonVpnService.kt`, not here.
         apply_bypass(&mut args, server_ip, bypass_cidrs, &tx)?;
         args.verbosity(ArgVerbosity::Warn);
         let mtu = args.mtu;
