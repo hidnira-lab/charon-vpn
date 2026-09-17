@@ -1,5 +1,7 @@
 export 'coming_soon.dart';
 export 'colors.dart';
+export 'conn_state.dart';
+export 'connect_dock.dart';
 export 'fonts.dart';
 export 'hazard_banner.dart';
 export 'hazard_chip.dart';

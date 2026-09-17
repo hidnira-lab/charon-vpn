@@ -20,7 +20,7 @@ class HazardBanner extends StatelessWidget {
     return ClipPath(
       clipper: const UnitPlateClipper(),
       child: DecoratedBox(
-        decoration: const BoxDecoration(color: CharonColors.surface2),
+        decoration: BoxDecoration(color: CharonColors.surface2),
         child: IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,

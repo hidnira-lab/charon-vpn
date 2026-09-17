@@ -110,7 +110,7 @@ class _ReliabilityRow extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              Text(desc, style: const TextStyle(fontSize: 13, color: CharonColors.muted, height: 1.4)),
+              Text(desc, style: TextStyle(fontSize: 13, color: CharonColors.muted, height: 1.4)),
               const SizedBox(height: 12),
               chip,
             ],

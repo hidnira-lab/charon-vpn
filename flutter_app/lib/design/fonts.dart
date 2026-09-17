@@ -14,7 +14,7 @@ class CharonFonts {
 /// has no CSS `text-transform`, so callers must pass already-uppercased text.
 TextStyle techLabel({
   double fontSize = 14,
-  Color color = CharonColors.foreground,
+  Color? color,
   FontWeight weight = FontWeight.w600,
 }) {
   return TextStyle(
@@ -22,6 +22,6 @@ TextStyle techLabel({
     fontWeight: weight,
     fontSize: fontSize,
     letterSpacing: fontSize * 0.12,
-    color: color,
+    color: color ?? CharonColors.foreground,
   );
 }

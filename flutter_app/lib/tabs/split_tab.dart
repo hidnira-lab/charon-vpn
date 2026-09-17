@@ -260,7 +260,7 @@ class _RuleList extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 4),
-        Text(note, style: const TextStyle(color: CharonColors.muted, fontSize: 11)),
+        Text(note, style: TextStyle(color: CharonColors.muted, fontSize: 11)),
         const SizedBox(height: 12),
         if (items.isEmpty)
           Container(
@@ -270,7 +270,7 @@ class _RuleList extends StatelessWidget {
             child: Text(
               'No exclusions — all $emptyHint routed through tunnel',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: CharonColors.muted, fontSize: 12, fontFamily: CharonFonts.mono),
+              style: TextStyle(color: CharonColors.muted, fontSize: 12, fontFamily: CharonFonts.mono),
             ),
           )
         else
@@ -288,7 +288,7 @@ class _RuleList extends StatelessWidget {
                           Text(items[i].name, style: techLabel(fontSize: 15)),
                           Text(
                             items[i].id,
-                            style: const TextStyle(fontFamily: CharonFonts.mono, fontSize: 11, color: CharonColors.muted),
+                            style: TextStyle(fontFamily: CharonFonts.mono, fontSize: 11, color: CharonColors.muted),
                           ),
                         ],
                       ),
@@ -303,7 +303,7 @@ class _RuleList extends StatelessWidget {
                     const SizedBox(width: 8),
                     IconButton(
                       tooltip: 'Hapus',
-                      icon: const Icon(LucideIcons.trash2, size: 16, color: CharonColors.muted),
+                      icon: Icon(LucideIcons.trash2, size: 16, color: CharonColors.muted),
                       onPressed: () => onRemove(i),
                     ),
                   ],
@@ -361,7 +361,7 @@ class _AppPickerDialogState extends State<_AppPickerDialog> {
             const SizedBox(height: 12),
             Expanded(
               child: filtered.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Text('Nggak ada app cocok', style: TextStyle(color: CharonColors.muted)),
                     )
                   : ListView.builder(

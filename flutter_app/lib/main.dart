@@ -40,6 +40,10 @@ Directory _windowsWorkspaceRoot() {
 
 Future<void> main() async {
   await RustLib.init();
+  // Loaded before `runApp` (not in `initState`) so the very first frame
+  // already renders in the right theme instead of flashing dark then
+  // switching once `_bootstrap` catches up.
+  CharonColors.isLight.value = await AppSettings().loadLightMode();
   runApp(const CharonApp());
 }
 
@@ -48,10 +52,15 @@ class CharonApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Charon VPN',
-      theme: CharonTheme.dark(),
-      home: const CharonHomePage(),
+    return ValueListenableBuilder<bool>(
+      valueListenable: CharonColors.isLight,
+      builder: (context, isLight, _) {
+        return MaterialApp(
+          title: 'Charon VPN',
+          theme: isLight ? CharonTheme.light() : CharonTheme.dark(),
+          home: const CharonHomePage(),
+        );
+      },
     );
   }
 }
@@ -101,6 +110,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
   bool _killSwitch = false;
   bool _autoReconnect = false;
   bool _autoConnect = false;
+  bool _lightMode = false;
 
   DateTime? _connectedAt;
   Duration _elapsed = Duration.zero;
@@ -135,6 +145,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
   @override
   void initState() {
     super.initState();
+    _lightMode = CharonColors.isLight.value;
     _eventSub = _bridge.events().listen(_onEvent);
     if (Platform.isAndroid) {
       androidVpnChannel.setMethodCallHandler(_onAndroidChannelCall);
@@ -173,6 +184,12 @@ class _CharonHomePageState extends State<CharonHomePage> {
   Future<void> _setAutoConnectPref(bool enabled) async {
     await _appSettings.saveAutoConnect(enabled);
     setState(() => _autoConnect = enabled);
+  }
+
+  Future<void> _setLightModePref(bool enabled) async {
+    CharonColors.isLight.value = enabled;
+    await _appSettings.saveLightMode(enabled);
+    setState(() => _lightMode = enabled);
   }
 
   @override
@@ -786,7 +803,12 @@ class _CharonHomePageState extends State<CharonHomePage> {
           applySyncPayload: _applySyncPayload,
         );
       case 6:
-        return ConfigTab(autoConnect: _autoConnect, onAutoConnectChanged: _setAutoConnectPref);
+        return ConfigTab(
+          autoConnect: _autoConnect,
+          onAutoConnectChanged: _setAutoConnectPref,
+          lightMode: _lightMode,
+          onLightModeChanged: _setLightModePref,
+        );
       case 0:
       default:
         return DashboardTab(
@@ -810,6 +832,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
       selectedIndex: _selectedIndex,
       onSelect: _onNavSelect,
       body: _buildBody(),
+      connectDock: ConnectDock(state: _connState, onToggle: _onToggleConnection),
     );
   }
 }

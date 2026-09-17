@@ -3,8 +3,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../design/design.dart';
 
-enum ConnState { connected, connecting, reconnecting, disconnected }
-
 class DashboardTab extends StatelessWidget {
   const DashboardTab({
     super.key,
@@ -109,11 +107,11 @@ class _StateMeta {
 _StateMeta _stateMeta(ConnState state) => switch (state) {
       ConnState.connected => const _StateMeta(CharonColors.primaryBright, 'CONNECTED', 'Tunnel secure', 'DISENGAGE'),
       ConnState.connecting =>
-        const _StateMeta(CharonColors.caution, 'CONNECTING', 'Negotiating VLESS-Reality…', 'STANDBY'),
+        _StateMeta(CharonColors.caution, 'CONNECTING', 'Negotiating VLESS-Reality…', 'STANDBY'),
       ConnState.reconnecting =>
-        const _StateMeta(CharonColors.caution, 'RECONNECTING', 'Link dropped — restoring', 'STANDBY'),
+        _StateMeta(CharonColors.caution, 'RECONNECTING', 'Link dropped — restoring', 'STANDBY'),
       ConnState.disconnected =>
-        const _StateMeta(CharonColors.steel, 'DISCONNECTED', 'Traffic unprotected', 'ENGAGE'),
+        _StateMeta(CharonColors.steel, 'DISCONNECTED', 'Traffic unprotected', 'ENGAGE'),
     };
 
 class _PowerPlate extends StatelessWidget {
@@ -176,7 +174,7 @@ class _PowerPlate extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             meta.sub,
-            style: const TextStyle(fontFamily: CharonFonts.mono, fontSize: 11, color: CharonColors.muted),
+            style: TextStyle(fontFamily: CharonFonts.mono, fontSize: 11, color: CharonColors.muted),
           ),
         ],
       ),
@@ -317,7 +315,7 @@ class _InfoColumn extends StatelessWidget {
                     if (activeProfileIp != null)
                       Text(
                         activeProfileIp!,
-                        style: const TextStyle(fontFamily: CharonFonts.mono, fontSize: 11, color: CharonColors.muted),
+                        style: TextStyle(fontFamily: CharonFonts.mono, fontSize: 11, color: CharonColors.muted),
                       ),
                   ],
                 ),

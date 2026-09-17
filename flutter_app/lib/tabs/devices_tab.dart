@@ -254,7 +254,7 @@ class _DevicesTabState extends State<DevicesTab> {
                       const SizedBox(height: 2),
                       Text(
                         osLabel,
-                        style: const TextStyle(fontFamily: CharonFonts.mono, fontSize: 11, color: CharonColors.muted),
+                        style: TextStyle(fontFamily: CharonFonts.mono, fontSize: 11, color: CharonColors.muted),
                       ),
                     ],
                   ),
@@ -304,7 +304,7 @@ class _PairingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Belum ada device lain yang ke-pair. Pair device ini dulu, terus pair device lain (pakai '
             'passphrase yang SAMA saat Push/Pull) buat sync server profiles, split-tunnel rules, dan '
             'settings.',
@@ -343,7 +343,7 @@ class _SyncCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Push kirim config device ini ke server (nimpa yang lama). Pull tarik config terbaru dari '
             'server (nimpa yang di device ini). Manual doang — nggak ada auto-sync atau deteksi konflik, '
             'push/pull terakhir yang menang. Data dienkripsi pakai passphrase sebelum dikirim - server '

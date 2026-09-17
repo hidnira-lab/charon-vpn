@@ -38,6 +38,7 @@ class CharonNavShell extends StatefulWidget {
     required this.body,
     this.sidebarFooter,
     this.drawerFooter,
+    this.connectDock,
   });
 
   final int selectedIndex;
@@ -45,6 +46,11 @@ class CharonNavShell extends StatefulWidget {
   final Widget body;
   final Widget? sidebarFooter;
   final Widget? drawerFooter;
+
+  /// Persistent bottom bar shown only on mobile (Milestone 13) — desktop
+  /// already keeps Dashboard one sidebar click away, so this stays null
+  /// there.
+  final Widget? connectDock;
 
   @override
   State<CharonNavShell> createState() => _CharonNavShellState();
@@ -69,7 +75,7 @@ class _CharonNavShellState extends State<CharonNavShell> {
         children: [
           Container(
             width: 240,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: CharonColors.surface2,
               border: Border(right: BorderSide(color: CharonColors.steel)),
             ),
@@ -109,12 +115,22 @@ class _CharonNavShellState extends State<CharonNavShell> {
         actions: [
           IconButton(
             tooltip: 'Open menu',
-            icon: const Icon(LucideIcons.menu, color: CharonColors.foreground),
+            icon: Icon(LucideIcons.menu, color: CharonColors.foreground),
             onPressed: () => setState(() => _drawerOpen = true),
           ),
         ],
       ),
-      body: Stack(
+      body: Column(
+        children: [
+          Expanded(child: _buildMobileStack()),
+          ?widget.connectDock,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileStack() {
+    return Stack(
         children: [
           widget.body,
           if (_drawerOpen) ...[
@@ -127,7 +143,7 @@ class _CharonNavShellState extends State<CharonNavShell> {
               child: Container(
                 width: 260,
                 height: double.infinity,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: CharonColors.surface2,
                   border: Border(left: BorderSide(color: CharonColors.steel)),
                 ),
@@ -142,7 +158,7 @@ class _CharonNavShellState extends State<CharonNavShell> {
                             Text('NAVIGATION', style: techLabel(fontSize: 13, color: CharonColors.muted)),
                             IconButton(
                               tooltip: 'Close menu',
-                              icon: const Icon(LucideIcons.x, color: CharonColors.muted, size: 18),
+                              icon: Icon(LucideIcons.x, color: CharonColors.muted, size: 18),
                               onPressed: () => setState(() => _drawerOpen = false),
                             ),
                           ],
@@ -172,7 +188,6 @@ class _CharonNavShellState extends State<CharonNavShell> {
             ),
           ],
         ],
-      ),
     );
   }
 }
@@ -218,7 +233,7 @@ class _Brand extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: CharonColors.steel))),
+      decoration: BoxDecoration(border: Border(bottom: BorderSide(color: CharonColors.steel))),
       child: Row(
         children: [
           Container(
@@ -236,7 +251,7 @@ class _Brand extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('CHARON', style: techLabel(fontSize: 20)),
-              const Text(
+              Text(
                 'VLESS · REALITY',
                 style: TextStyle(
                   fontFamily: CharonFonts.mono,

@@ -48,7 +48,7 @@ class UnitPlate extends StatelessWidget {
                 top: 8,
                 child: Text(
                   code!,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: CharonFonts.mono,
                     fontSize: 10,
                     letterSpacing: 1.2,

@@ -2,15 +2,24 @@ import 'package:flutter/material.dart';
 
 import '../design/design.dart';
 
-/// Restyled per Milestone 6.4. Only "Auto-connect on launch" is wired to
-/// real behavior — the other three rows mirror the reference layout but
-/// have no logic behind them (notifications/launch-at-startup/telemetry
-/// aren't implemented); the caption below says so explicitly.
+/// Restyled per Milestone 6.4, light mode toggle added in Milestone 13. Only
+/// "Auto-connect on launch" and "Light mode" are wired to real behavior —
+/// the other three rows mirror the reference layout but have no logic
+/// behind them (notifications/launch-at-startup/telemetry aren't
+/// implemented); the caption below says so explicitly.
 class ConfigTab extends StatefulWidget {
-  const ConfigTab({super.key, required this.autoConnect, required this.onAutoConnectChanged});
+  const ConfigTab({
+    super.key,
+    required this.autoConnect,
+    required this.onAutoConnectChanged,
+    required this.lightMode,
+    required this.onLightModeChanged,
+  });
 
   final bool autoConnect;
   final ValueChanged<bool> onAutoConnectChanged;
+  final bool lightMode;
+  final ValueChanged<bool> onLightModeChanged;
 
   @override
   State<ConfigTab> createState() => _ConfigTabState();
@@ -41,21 +50,28 @@ class _ConfigTabState extends State<ConfigTab> {
                   value: widget.autoConnect,
                   onChanged: widget.onAutoConnectChanged,
                 ),
-                const Divider(height: 1, color: CharonColors.steel),
+                Divider(height: 1, color: CharonColors.steel),
+                _SettingRow(
+                  title: 'Light mode',
+                  desc: 'Switch the console palette from dark to light.',
+                  value: widget.lightMode,
+                  onChanged: widget.onLightModeChanged,
+                ),
+                Divider(height: 1, color: CharonColors.steel),
                 _SettingRow(
                   title: 'Desktop notifications',
                   desc: 'Alert on connect, drop, and reconnect events.',
                   value: _notify,
                   onChanged: (v) => setState(() => _notify = v),
                 ),
-                const Divider(height: 1, color: CharonColors.steel),
+                Divider(height: 1, color: CharonColors.steel),
                 _SettingRow(
                   title: 'Launch at startup',
                   desc: 'Start Charon minimized when the system boots.',
                   value: _launchAtStartup,
                   onChanged: (v) => setState(() => _launchAtStartup = v),
                 ),
-                const Divider(height: 1, color: CharonColors.steel),
+                Divider(height: 1, color: CharonColors.steel),
                 _SettingRow(
                   title: 'Anonymous telemetry',
                   desc: 'Share aggregated diagnostics to improve routing.',
@@ -66,12 +82,12 @@ class _ConfigTabState extends State<ConfigTab> {
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Notifications, launch-at-startup, and telemetry are placeholders — not wired up yet.',
             style: TextStyle(color: CharonColors.muted, fontSize: 12),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Charon VPN · xray-core (bundled)',
             style: TextStyle(fontFamily: CharonFonts.mono, fontSize: 11, color: CharonColors.muted),
           ),
@@ -101,10 +117,10 @@ class _SettingRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: CharonColors.foreground),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: CharonColors.foreground),
                 ),
                 const SizedBox(height: 4),
-                Text(desc, style: const TextStyle(fontSize: 13, color: CharonColors.muted)),
+                Text(desc, style: TextStyle(fontSize: 13, color: CharonColors.muted)),
               ],
             ),
           ),

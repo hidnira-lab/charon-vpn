@@ -14,15 +14,30 @@ class AppSettings {
     return File('${dir.path}/$_fileName');
   }
 
-  Future<bool> loadAutoConnect() async {
+  Future<Map<String, dynamic>> _readAll() async {
     final file = await _file();
-    if (!await file.exists()) return false;
-    final data = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-    return data['autoConnect'] as bool? ?? false;
+    if (!await file.exists()) return {};
+    return jsonDecode(await file.readAsString()) as Map<String, dynamic>;
   }
 
-  Future<void> saveAutoConnect(bool enabled) async {
+  Future<void> _writeAll(Map<String, dynamic> data) async {
     final file = await _file();
-    await file.writeAsString(jsonEncode({'autoConnect': enabled}));
+    await file.writeAsString(jsonEncode(data));
+  }
+
+  Future<bool> loadAutoConnect() async => (await _readAll())['autoConnect'] as bool? ?? false;
+
+  Future<void> saveAutoConnect(bool enabled) async {
+    final data = await _readAll();
+    data['autoConnect'] = enabled;
+    await _writeAll(data);
+  }
+
+  Future<bool> loadLightMode() async => (await _readAll())['lightMode'] as bool? ?? false;
+
+  Future<void> saveLightMode(bool enabled) async {
+    final data = await _readAll();
+    data['lightMode'] = enabled;
+    await _writeAll(data);
   }
 }

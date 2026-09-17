@@ -46,7 +46,7 @@ class NodesTab extends StatelessWidget {
                 IconButton(
                   tooltip: 'Import dari vless:// link',
                   onPressed: onImportLink,
-                  icon: const Icon(LucideIcons.link, color: CharonColors.muted),
+                  icon: Icon(LucideIcons.link, color: CharonColors.muted),
                 ),
                 IconButton(
                   tooltip: 'Tambah profile',
@@ -58,7 +58,7 @@ class NodesTab extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           if (profiles.isEmpty)
-            const UnitPlate(
+            UnitPlate(
               child: Text(
                 'Belum ada server profile. Tambah lewat tombol + di atas.',
                 style: TextStyle(color: CharonColors.muted),
@@ -85,7 +85,7 @@ class NodesTab extends StatelessWidget {
             ),
           if (locked) ...[
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Disconnect dulu buat ganti atau hapus profile yang lagi aktif.',
               style: TextStyle(color: CharonColors.muted, fontSize: 12),
             ),
@@ -142,7 +142,7 @@ class _NodeCard extends StatelessWidget {
                         Text(profile.name, style: techLabel(fontSize: 15), overflow: TextOverflow.ellipsis),
                         Text(
                           profile.serverIp,
-                          style: const TextStyle(fontFamily: CharonFonts.mono, fontSize: 11, color: CharonColors.muted),
+                          style: TextStyle(fontFamily: CharonFonts.mono, fontSize: 11, color: CharonColors.muted),
                         ),
                       ],
                     ),
@@ -161,12 +161,12 @@ class _NodeCard extends StatelessWidget {
                 children: [
                   IconButton(
                     tooltip: 'Edit',
-                    icon: const Icon(LucideIcons.pencil, size: 16, color: CharonColors.muted),
+                    icon: Icon(LucideIcons.pencil, size: 16, color: CharonColors.muted),
                     onPressed: onEdit,
                   ),
                   IconButton(
                     tooltip: 'Hapus',
-                    icon: const Icon(LucideIcons.trash2, size: 16, color: CharonColors.muted),
+                    icon: Icon(LucideIcons.trash2, size: 16, color: CharonColors.muted),
                     onPressed: onDelete,
                   ),
                 ],

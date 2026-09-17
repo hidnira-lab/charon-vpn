@@ -61,7 +61,7 @@ class TelemetryTab extends StatelessWidget {
                 Text(
                   'Bulan ini: ${totalGb.toStringAsFixed(2)} GB / $_quotaGb GB kuota '
                   '(${quotaPct.toStringAsFixed(1)}%)',
-                  style: const TextStyle(fontFamily: CharonFonts.mono, fontSize: 12, color: CharonColors.muted),
+                  style: TextStyle(fontFamily: CharonFonts.mono, fontSize: 12, color: CharonColors.muted),
                 ),
                 const SizedBox(height: 12),
                 UnitPlate(
@@ -77,7 +77,7 @@ class TelemetryTab extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 24),
-                      const Text(
+                      Text(
                         'Chart belum tersedia — total & live throughput udah real (lihat stat card di atas '
                         'dan Dashboard), grafik historis-nya sendiri belum digarap.',
                         style: TextStyle(color: CharonColors.muted, fontSize: 12),
@@ -149,7 +149,7 @@ class _StatCard extends StatelessWidget {
                 ),
                 if (unit.isNotEmpty) ...[
                   const SizedBox(width: 4),
-                  Text(unit, style: const TextStyle(fontFamily: CharonFonts.mono, fontSize: 12, color: CharonColors.muted)),
+                  Text(unit, style: TextStyle(fontFamily: CharonFonts.mono, fontSize: 12, color: CharonColors.muted)),
                 ],
               ],
             ),

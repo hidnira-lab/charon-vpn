@@ -44,7 +44,7 @@ class SectionHeader extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   desc!,
-                  style: const TextStyle(fontFamily: CharonFonts.body, fontSize: 13, color: CharonColors.muted),
+                  style: TextStyle(fontFamily: CharonFonts.body, fontSize: 13, color: CharonColors.muted),
                 ),
               ],
             ],

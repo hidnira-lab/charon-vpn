@@ -30,7 +30,7 @@ class Readout extends StatelessWidget {
     };
     return Container(
       padding: const EdgeInsets.only(left: 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(left: BorderSide(color: CharonColors.steel, width: 2)),
       ),
       child: Column(
@@ -39,7 +39,7 @@ class Readout extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: CharonFonts.display,
               fontSize: 10,
               fontWeight: FontWeight.w600,
@@ -58,7 +58,7 @@ class Readout extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   unit!,
-                  style: const TextStyle(fontFamily: CharonFonts.mono, fontSize: 12, color: CharonColors.muted),
+                  style: TextStyle(fontFamily: CharonFonts.mono, fontSize: 12, color: CharonColors.muted),
                 ),
               ],
             ],
