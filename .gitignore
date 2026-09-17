@@ -10,3 +10,4 @@ app/generated-client-config.json
 screenshot/
 .vscode/
 needs/
+sync-server/charon-sync-data/

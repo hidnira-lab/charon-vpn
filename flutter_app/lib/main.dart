@@ -240,6 +240,49 @@ class _CharonHomePageState extends State<CharonHomePage> {
     await _splitTunnelStore.saveDomains(_domainRules);
   }
 
+  /// Everything Milestone 11 sync pushes/pulls, as one JSON-able snapshot -
+  /// see `DevicesTab`. Reuses each model's existing `toJson()`/`fromJson()`
+  /// rather than inventing a second serialization for the same data.
+  Map<String, dynamic> _buildSyncPayload() => {
+        'profiles': {
+          'list': _profiles.map((p) => p.toJson()).toList(),
+          'activeId': _activeProfileId,
+        },
+        'splitTunnel': {
+          'apps': _excludedApps.map((r) => r.toJson()).toList(),
+          'domains': _domainRules.map((r) => r.toJson()).toList(),
+        },
+        'settings': {'autoConnect': _autoConnect},
+      };
+
+  Future<void> _applySyncPayload(Map<String, dynamic> payload) async {
+    final profilesData = payload['profiles'] as Map<String, dynamic>;
+    final profiles = (profilesData['list'] as List)
+        .map((e) => ServerProfile.fromJson(e as Map<String, dynamic>))
+        .toList();
+    final activeId = profilesData['activeId'] as String?;
+
+    final splitData = payload['splitTunnel'] as Map<String, dynamic>;
+    final apps = (splitData['apps'] as List).map((e) => SplitRule.fromJson(e as Map<String, dynamic>)).toList();
+    final domains =
+        (splitData['domains'] as List).map((e) => SplitRule.fromJson(e as Map<String, dynamic>)).toList();
+
+    final settingsData = payload['settings'] as Map<String, dynamic>;
+    final autoConnect = settingsData['autoConnect'] as bool? ?? false;
+
+    setState(() {
+      _profiles = profiles;
+      _activeProfileId = activeId;
+      _excludedApps = apps;
+      _domainRules = domains;
+      _autoConnect = autoConnect;
+    });
+    await _profileStore.save(_profiles, _activeProfileId);
+    await _splitTunnelStore.saveApps(_excludedApps);
+    await _splitTunnelStore.saveDomains(_domainRules);
+    await _appSettings.saveAutoConnect(_autoConnect);
+  }
+
   /// Domain rules get resolved to bypass CIDRs at connect time on both
   /// platforms (Windows via `_startTunnel`, Android via
   /// `_onAndroidChannelCall`). `tun2proxy` only bypasses by IP/CIDR, not by
@@ -563,7 +606,11 @@ class _CharonHomePageState extends State<CharonHomePage> {
       case 4:
         return TelemetryTab(logs: _logs, scrollController: _scrollController);
       case 5:
-        return const DevicesTab();
+        return DevicesTab(
+          serverIp: _activeProfile?.serverIp,
+          buildSyncPayload: _buildSyncPayload,
+          applySyncPayload: _applySyncPayload,
+        );
       case 6:
         return ConfigTab(autoConnect: _autoConnect, onAutoConnectChanged: _setAutoConnectPref);
       case 0:

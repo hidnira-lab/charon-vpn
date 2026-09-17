@@ -26,7 +26,11 @@ class _PreviewAppState extends State<_PreviewApp> {
       home: CharonNavShell(
         selectedIndex: _selected,
         onSelect: (i) => setState(() => _selected = i),
-        body: const DevicesTab(),
+        body: DevicesTab(
+          serverIp: null,
+          buildSyncPayload: () => const {},
+          applySyncPayload: (_) async {},
+        ),
       ),
     );
   }
