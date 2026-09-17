@@ -140,7 +140,10 @@ impl eframe::App for CharonApp {
                 // Milestone 8) - these variants are never actually emitted
                 // in its event flow, but the match still has to be
                 // exhaustive over `AppEvent`.
-                AppEvent::Blocked | AppEvent::Reconnecting | AppEvent::Reconnected => {}
+                AppEvent::Blocked
+                | AppEvent::Reconnecting
+                | AppEvent::Reconnected
+                | AppEvent::ReconnectFailed => {}
             }
         }
 

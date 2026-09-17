@@ -77,6 +77,19 @@ class _CharonHomePageState extends State<CharonHomePage> {
   List<SplitRule> _excludedApps = [];
   List<SplitRule> _domainRules = [];
 
+  /// Cached once the VPN interface comes up on Android (from
+  /// `_onAndroidChannelCall`) so dest-rotation failover can restart the
+  /// tunnel with a different profile's config without re-triggering the
+  /// native permission flow - the fd stays valid across xray/tunnel
+  /// restarts as long as the user hasn't explicitly disconnected.
+  int? _androidTunFd;
+
+  /// Profile ids already tried in the current dest-rotation failover cycle,
+  /// and the profile that was active before the cycle started (restored if
+  /// every profile fails). Both reset once a cycle ends, one way or another.
+  final Set<String> _failoverTried = {};
+  String? _failoverOriginalId;
+
   int _selectedIndex = 0;
   bool _xrayRunning = false;
   bool _tunnelRunning = false;
@@ -411,6 +424,98 @@ class _CharonHomePageState extends State<CharonHomePage> {
         });
         _markConnected();
         _pushLog('[app] reconnected');
+      case CharonEvent_ReconnectFailed():
+        _handleReconnectFailed();
+    }
+  }
+
+  /// Reactive dest/server rotation (Milestone 12): auto-reconnect just gave
+  /// up on the active profile after exhausting its retries. If there's more
+  /// than one saved profile, try the rest in list order before admitting
+  /// defeat - covers both "server/dest is blocked" and "server is down"
+  /// without the user having to notice and switch manually.
+  Future<void> _handleReconnectFailed() async {
+    if (_profiles.length <= 1) {
+      setState(() => _reconnecting = false);
+      _pushLog('[app] auto-reconnect gave up, no other saved profile to fail over to.');
+      return;
+    }
+    _failoverOriginalId ??= _activeProfileId;
+    await _attemptFailover();
+  }
+
+  Future<void> _attemptFailover() async {
+    final failedId = _activeProfileId;
+    if (failedId != null) _failoverTried.add(failedId);
+    ServerProfile? candidate;
+    for (final p in _profiles) {
+      if (!_failoverTried.contains(p.id)) {
+        candidate = p;
+        break;
+      }
+    }
+    if (candidate == null) {
+      setState(() {
+        _reconnecting = false;
+        _activeProfileId = _failoverOriginalId;
+      });
+      _pushLog('[app] failover: all saved profiles failed, giving up. Reconnect manually.');
+      _failoverTried.clear();
+      _failoverOriginalId = null;
+      return;
+    }
+    _pushLog('[app] failover: trying profile "${candidate.name}"...');
+    setState(() {
+      _activeProfileId = candidate!.id;
+      _connecting = true;
+    });
+    await _startXray();
+    if (_xrayRunning) {
+      await _startTunnelForFailover();
+    }
+    setState(() => _connecting = false);
+    if (_xrayRunning && _tunnelRunning) {
+      setState(() {
+        _reconnecting = false;
+        _blocked = false;
+      });
+      _markConnected();
+      await _profileStore.save(_profiles, _activeProfileId);
+      _pushLog('[app] failover succeeded, active profile is now "${candidate.name}".');
+      _failoverTried.clear();
+      _failoverOriginalId = null;
+    } else {
+      await _attemptFailover();
+    }
+  }
+
+  /// Restarts the tunnel for a failover candidate. On Android this reuses
+  /// the already-established VpnService fd instead of going through
+  /// `_startTunnel`'s native `prepareAndStart` permission flow again - the
+  /// interface is still up, only xray's target server changed.
+  Future<void> _startTunnelForFailover() async {
+    if (!Platform.isAndroid) {
+      await _startTunnel();
+      return;
+    }
+    final fd = _androidTunFd;
+    final profile = _activeProfile;
+    if (fd == null || profile == null) {
+      _pushLog('[app] failover: no cached tun fd, cannot restart tunnel.');
+      return;
+    }
+    try {
+      final bypassCidrs = await _resolveBypassCidrs();
+      await _bridge.startTunnel(
+        proxyUrl: _localSocksProxy,
+        serverIp: profile.serverIp,
+        tunFd: fd,
+        bypassCidrs: bypassCidrs,
+      );
+      setState(() => _tunnelRunning = true);
+      _pushLog('[app] tunnel restarted for failover (fd=$fd)');
+    } catch (e) {
+      _pushLog('[app] failover: failed to restart tunnel: $e');
     }
   }
 
@@ -420,6 +525,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
   Future<void> _onAndroidChannelCall(MethodCall call) async {
     if (call.method != 'onTunFd') return;
     final fd = call.arguments as int;
+    _androidTunFd = fd;
     final profile = _activeProfile;
     if (profile == null) {
       _pushLog('[app] no server profile selected');
@@ -512,6 +618,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
     await _bridge.stopTunnel();
     if (Platform.isAndroid) {
       await androidVpnChannel.invokeMethod('stop');
+      _androidTunFd = null;
     }
     _pushLog('[app] tunnel stopping...');
   }
@@ -536,6 +643,8 @@ class _CharonHomePageState extends State<CharonHomePage> {
       }
       return;
     }
+    _failoverTried.clear();
+    _failoverOriginalId = null;
     setState(() => _connecting = true);
     await _startXray();
     if (_xrayRunning) {

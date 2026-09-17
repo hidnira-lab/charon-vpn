@@ -588,6 +588,9 @@ impl SseDecode for crate::api::simple::CharonEvent {
             6 => {
                 return crate::api::simple::CharonEvent::Reconnected;
             }
+            7 => {
+                return crate::api::simple::CharonEvent::ReconnectFailed;
+            }
             _ => {
                 unimplemented!("");
             }
@@ -767,6 +770,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::simple::CharonEvent {
             crate::api::simple::CharonEvent::Blocked => [4.into_dart()].into_dart(),
             crate::api::simple::CharonEvent::Reconnecting => [5.into_dart()].into_dart(),
             crate::api::simple::CharonEvent::Reconnected => [6.into_dart()].into_dart(),
+            crate::api::simple::CharonEvent::ReconnectFailed => [7.into_dart()].into_dart(),
             _ => {
                 unimplemented!("");
             }
@@ -862,6 +866,9 @@ impl SseEncode for crate::api::simple::CharonEvent {
             }
             crate::api::simple::CharonEvent::Reconnected => {
                 <i32>::sse_encode(6, serializer);
+            }
+            crate::api::simple::CharonEvent::ReconnectFailed => {
+                <i32>::sse_encode(7, serializer);
             }
             _ => {
                 unimplemented!("");

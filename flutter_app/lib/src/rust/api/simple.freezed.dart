@@ -56,7 +56,7 @@ extension CharonEventPatterns on CharonEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( CharonEvent_XrayLog value)?  xrayLog,TResult Function( CharonEvent_TunnelLog value)?  tunnelLog,TResult Function( CharonEvent_TunnelStopped value)?  tunnelStopped,TResult Function( CharonEvent_XrayStopped value)?  xrayStopped,TResult Function( CharonEvent_Blocked value)?  blocked,TResult Function( CharonEvent_Reconnecting value)?  reconnecting,TResult Function( CharonEvent_Reconnected value)?  reconnected,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( CharonEvent_XrayLog value)?  xrayLog,TResult Function( CharonEvent_TunnelLog value)?  tunnelLog,TResult Function( CharonEvent_TunnelStopped value)?  tunnelStopped,TResult Function( CharonEvent_XrayStopped value)?  xrayStopped,TResult Function( CharonEvent_Blocked value)?  blocked,TResult Function( CharonEvent_Reconnecting value)?  reconnecting,TResult Function( CharonEvent_Reconnected value)?  reconnected,TResult Function( CharonEvent_ReconnectFailed value)?  reconnectFailed,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog() when xrayLog != null:
@@ -66,7 +66,8 @@ return tunnelStopped(_that);case CharonEvent_XrayStopped() when xrayStopped != n
 return xrayStopped(_that);case CharonEvent_Blocked() when blocked != null:
 return blocked(_that);case CharonEvent_Reconnecting() when reconnecting != null:
 return reconnecting(_that);case CharonEvent_Reconnected() when reconnected != null:
-return reconnected(_that);case _:
+return reconnected(_that);case CharonEvent_ReconnectFailed() when reconnectFailed != null:
+return reconnectFailed(_that);case _:
   return orElse();
 
 }
@@ -84,7 +85,7 @@ return reconnected(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( CharonEvent_XrayLog value)  xrayLog,required TResult Function( CharonEvent_TunnelLog value)  tunnelLog,required TResult Function( CharonEvent_TunnelStopped value)  tunnelStopped,required TResult Function( CharonEvent_XrayStopped value)  xrayStopped,required TResult Function( CharonEvent_Blocked value)  blocked,required TResult Function( CharonEvent_Reconnecting value)  reconnecting,required TResult Function( CharonEvent_Reconnected value)  reconnected,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( CharonEvent_XrayLog value)  xrayLog,required TResult Function( CharonEvent_TunnelLog value)  tunnelLog,required TResult Function( CharonEvent_TunnelStopped value)  tunnelStopped,required TResult Function( CharonEvent_XrayStopped value)  xrayStopped,required TResult Function( CharonEvent_Blocked value)  blocked,required TResult Function( CharonEvent_Reconnecting value)  reconnecting,required TResult Function( CharonEvent_Reconnected value)  reconnected,required TResult Function( CharonEvent_ReconnectFailed value)  reconnectFailed,}){
 final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog():
@@ -94,7 +95,8 @@ return tunnelStopped(_that);case CharonEvent_XrayStopped():
 return xrayStopped(_that);case CharonEvent_Blocked():
 return blocked(_that);case CharonEvent_Reconnecting():
 return reconnecting(_that);case CharonEvent_Reconnected():
-return reconnected(_that);}
+return reconnected(_that);case CharonEvent_ReconnectFailed():
+return reconnectFailed(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -108,7 +110,7 @@ return reconnected(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( CharonEvent_XrayLog value)?  xrayLog,TResult? Function( CharonEvent_TunnelLog value)?  tunnelLog,TResult? Function( CharonEvent_TunnelStopped value)?  tunnelStopped,TResult? Function( CharonEvent_XrayStopped value)?  xrayStopped,TResult? Function( CharonEvent_Blocked value)?  blocked,TResult? Function( CharonEvent_Reconnecting value)?  reconnecting,TResult? Function( CharonEvent_Reconnected value)?  reconnected,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( CharonEvent_XrayLog value)?  xrayLog,TResult? Function( CharonEvent_TunnelLog value)?  tunnelLog,TResult? Function( CharonEvent_TunnelStopped value)?  tunnelStopped,TResult? Function( CharonEvent_XrayStopped value)?  xrayStopped,TResult? Function( CharonEvent_Blocked value)?  blocked,TResult? Function( CharonEvent_Reconnecting value)?  reconnecting,TResult? Function( CharonEvent_Reconnected value)?  reconnected,TResult? Function( CharonEvent_ReconnectFailed value)?  reconnectFailed,}){
 final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog() when xrayLog != null:
@@ -118,7 +120,8 @@ return tunnelStopped(_that);case CharonEvent_XrayStopped() when xrayStopped != n
 return xrayStopped(_that);case CharonEvent_Blocked() when blocked != null:
 return blocked(_that);case CharonEvent_Reconnecting() when reconnecting != null:
 return reconnecting(_that);case CharonEvent_Reconnected() when reconnected != null:
-return reconnected(_that);case _:
+return reconnected(_that);case CharonEvent_ReconnectFailed() when reconnectFailed != null:
+return reconnectFailed(_that);case _:
   return null;
 
 }
@@ -135,7 +138,7 @@ return reconnected(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String field0)?  xrayLog,TResult Function( String field0)?  tunnelLog,TResult Function( bool ok,  String? message)?  tunnelStopped,TResult Function( int? code)?  xrayStopped,TResult Function()?  blocked,TResult Function()?  reconnecting,TResult Function()?  reconnected,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String field0)?  xrayLog,TResult Function( String field0)?  tunnelLog,TResult Function( bool ok,  String? message)?  tunnelStopped,TResult Function( int? code)?  xrayStopped,TResult Function()?  blocked,TResult Function()?  reconnecting,TResult Function()?  reconnected,TResult Function()?  reconnectFailed,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog() when xrayLog != null:
 return xrayLog(_that.field0);case CharonEvent_TunnelLog() when tunnelLog != null:
@@ -144,7 +147,8 @@ return tunnelStopped(_that.ok,_that.message);case CharonEvent_XrayStopped() when
 return xrayStopped(_that.code);case CharonEvent_Blocked() when blocked != null:
 return blocked();case CharonEvent_Reconnecting() when reconnecting != null:
 return reconnecting();case CharonEvent_Reconnected() when reconnected != null:
-return reconnected();case _:
+return reconnected();case CharonEvent_ReconnectFailed() when reconnectFailed != null:
+return reconnectFailed();case _:
   return orElse();
 
 }
@@ -162,7 +166,7 @@ return reconnected();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String field0)  xrayLog,required TResult Function( String field0)  tunnelLog,required TResult Function( bool ok,  String? message)  tunnelStopped,required TResult Function( int? code)  xrayStopped,required TResult Function()  blocked,required TResult Function()  reconnecting,required TResult Function()  reconnected,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String field0)  xrayLog,required TResult Function( String field0)  tunnelLog,required TResult Function( bool ok,  String? message)  tunnelStopped,required TResult Function( int? code)  xrayStopped,required TResult Function()  blocked,required TResult Function()  reconnecting,required TResult Function()  reconnected,required TResult Function()  reconnectFailed,}) {final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog():
 return xrayLog(_that.field0);case CharonEvent_TunnelLog():
@@ -171,7 +175,8 @@ return tunnelStopped(_that.ok,_that.message);case CharonEvent_XrayStopped():
 return xrayStopped(_that.code);case CharonEvent_Blocked():
 return blocked();case CharonEvent_Reconnecting():
 return reconnecting();case CharonEvent_Reconnected():
-return reconnected();}
+return reconnected();case CharonEvent_ReconnectFailed():
+return reconnectFailed();}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -185,7 +190,7 @@ return reconnected();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String field0)?  xrayLog,TResult? Function( String field0)?  tunnelLog,TResult? Function( bool ok,  String? message)?  tunnelStopped,TResult? Function( int? code)?  xrayStopped,TResult? Function()?  blocked,TResult? Function()?  reconnecting,TResult? Function()?  reconnected,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String field0)?  xrayLog,TResult? Function( String field0)?  tunnelLog,TResult? Function( bool ok,  String? message)?  tunnelStopped,TResult? Function( int? code)?  xrayStopped,TResult? Function()?  blocked,TResult? Function()?  reconnecting,TResult? Function()?  reconnected,TResult? Function()?  reconnectFailed,}) {final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog() when xrayLog != null:
 return xrayLog(_that.field0);case CharonEvent_TunnelLog() when tunnelLog != null:
@@ -194,7 +199,8 @@ return tunnelStopped(_that.ok,_that.message);case CharonEvent_XrayStopped() when
 return xrayStopped(_that.code);case CharonEvent_Blocked() when blocked != null:
 return blocked();case CharonEvent_Reconnecting() when reconnecting != null:
 return reconnecting();case CharonEvent_Reconnected() when reconnected != null:
-return reconnected();case _:
+return reconnected();case CharonEvent_ReconnectFailed() when reconnectFailed != null:
+return reconnectFailed();case _:
   return null;
 
 }
@@ -564,6 +570,38 @@ int get hashCode => runtimeType.hashCode;
 @override
 String toString() {
     return 'CharonEvent.reconnected()';
+}
+
+
+}
+
+
+
+
+/// @nodoc
+
+
+class CharonEvent_ReconnectFailed extends CharonEvent {
+  const CharonEvent_ReconnectFailed(): super._();
+  
+
+
+
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is CharonEvent_ReconnectFailed);
+}
+
+
+@override
+int get hashCode => runtimeType.hashCode;
+
+@override
+String toString() {
+    return 'CharonEvent.reconnectFailed()';
 }
 
 

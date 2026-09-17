@@ -22,6 +22,10 @@ pub enum CharonEvent {
     Blocked,
     Reconnecting,
     Reconnected,
+    /// Auto-reconnect gave up on the current profile's config after
+    /// exhausting all retries - the Dart side decides whether to fail over
+    /// to another saved server profile.
+    ReconnectFailed,
 }
 
 impl From<AppEvent> for CharonEvent {
@@ -41,6 +45,7 @@ impl From<AppEvent> for CharonEvent {
             AppEvent::Blocked => CharonEvent::Blocked,
             AppEvent::Reconnecting => CharonEvent::Reconnecting,
             AppEvent::Reconnected => CharonEvent::Reconnected,
+            AppEvent::ReconnectFailed => CharonEvent::ReconnectFailed,
         }
     }
 }

@@ -72,4 +72,9 @@ sealed class CharonEvent with _$CharonEvent {
   const factory CharonEvent.blocked() = CharonEvent_Blocked;
   const factory CharonEvent.reconnecting() = CharonEvent_Reconnecting;
   const factory CharonEvent.reconnected() = CharonEvent_Reconnected;
+
+  /// Auto-reconnect gave up on the current profile's config after
+  /// exhausting all retries - the Dart side decides whether to fail over
+  /// to another saved server profile.
+  const factory CharonEvent.reconnectFailed() = CharonEvent_ReconnectFailed;
 }

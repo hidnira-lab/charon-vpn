@@ -12,4 +12,10 @@ pub enum AppEvent {
     Blocked,
     Reconnecting,
     Reconnected,
+    /// Auto-reconnect exhausted all attempts against the current xray/tunnel
+    /// config. The supervisor itself doesn't know about server profiles -
+    /// this just signals "give up on this config", leaving it to whoever
+    /// owns the profile list (the Dart side) to decide whether to try a
+    /// different one.
+    ReconnectFailed,
 }

@@ -64,7 +64,8 @@ class FailsafeTab extends StatelessWidget {
               iconColor: CharonColors.caution,
               title: 'Auto-Reconnect',
               desc: 'Automatically restarts xray and the tunnel after a drop. Retries 5 times, '
-                  '5 seconds apart, then gives up.',
+                  '5 seconds apart, per profile — if there\'s more than one saved profile, it fails '
+                  'over through the rest before giving up.',
               chip: const HazardChip(label: 'TRANSITION HANDLER', tone: HazardChipTone.caution),
               toggle: RockerToggle(value: autoReconnect, onChanged: onAutoReconnectChanged, tone: RockerTone.caution),
             ),

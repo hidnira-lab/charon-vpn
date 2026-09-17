@@ -549,6 +549,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         return CharonEvent_Reconnecting();
       case 6:
         return CharonEvent_Reconnected();
+      case 7:
+        return CharonEvent_ReconnectFailed();
       default:
         throw Exception("unreachable");
     }
@@ -697,6 +699,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         return CharonEvent_Reconnecting();
       case 6:
         return CharonEvent_Reconnected();
+      case 7:
+        return CharonEvent_ReconnectFailed();
       default:
         throw UnimplementedError('');
     }
@@ -872,6 +876,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_32(5, serializer);
       case CharonEvent_Reconnected():
         sse_encode_i_32(6, serializer);
+      case CharonEvent_ReconnectFailed():
+        sse_encode_i_32(7, serializer);
     }
   }
 

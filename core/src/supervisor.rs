@@ -239,9 +239,7 @@ impl Supervisor {
                 let _ = sup.0.external_tx.send(AppEvent::Reconnected);
                 return;
             }
-            let _ = sup.0.external_tx.send(AppEvent::TunnelLog(
-                "[supervisor] auto-reconnect gave up, reconnect manually.".to_string(),
-            ));
+            let _ = sup.0.external_tx.send(AppEvent::ReconnectFailed);
         });
     }
 
