@@ -26,6 +26,12 @@ pub enum CharonEvent {
     /// exhausting all retries - the Dart side decides whether to fail over
     /// to another saved server profile.
     ReconnectFailed,
+    /// Cumulative tunnel bytes since process start (see
+    /// `AppEvent::TrafficSample`). Widened from `u64` to `i64` at this
+    /// boundary so Dart gets a plain `int` instead of `BigInt` - traffic
+    /// counts never realistically approach `i64::MAX`.
+    TrafficSample { tx_bytes: i64, rx_bytes: i64 },
+    LatencyMs { ms: Option<i32> },
 }
 
 impl From<AppEvent> for CharonEvent {
@@ -46,6 +52,11 @@ impl From<AppEvent> for CharonEvent {
             AppEvent::Reconnecting => CharonEvent::Reconnecting,
             AppEvent::Reconnected => CharonEvent::Reconnected,
             AppEvent::ReconnectFailed => CharonEvent::ReconnectFailed,
+            AppEvent::TrafficSample { tx_bytes, rx_bytes } => CharonEvent::TrafficSample {
+                tx_bytes: tx_bytes as i64,
+                rx_bytes: rx_bytes as i64,
+            },
+            AppEvent::LatencyMs(ms) => CharonEvent::LatencyMs { ms: ms.map(|v| v as i32) },
         }
     }
 }

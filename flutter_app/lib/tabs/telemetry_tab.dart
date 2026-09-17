@@ -3,18 +3,36 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../design/design.dart';
 
-/// Restyled per Milestone 6.6. Traffic stats/chart are placeholders — the
-/// FFI plumbing for real throughput numbers was explicitly deferred back in
-/// Milestone 10 (see CLAUDE.md). Log console (relocated from Milestone 6.1)
-/// lives below, unchanged in behavior.
+/// Restyled per Milestone 6.6, wired to real totals in Milestone 12. "Total
+/// Down"/"Total Up" are the current calendar month's running totals from
+/// `TrafficStore` (persisted, survives app restart, resets each month) -
+/// "Uptime"/"Sessions" stay placeholders, that's session-history tracking
+/// nobody asked for yet. The historical chart is still not implemented
+/// (needs a time-series buffer + a real chart widget, out of scope for
+/// Milestone 12's "live numbers" ask) - only the instant readouts landed.
+/// Log console (relocated from Milestone 6.1) lives below, unchanged.
 class TelemetryTab extends StatelessWidget {
-  const TelemetryTab({super.key, required this.logs, required this.scrollController});
+  const TelemetryTab({
+    super.key,
+    required this.logs,
+    required this.scrollController,
+    required this.monthlyTxBytes,
+    required this.monthlyRxBytes,
+  });
 
   final List<String> logs;
   final ScrollController scrollController;
+  final int monthlyTxBytes;
+  final int monthlyRxBytes;
+
+  static const _quotaGb = 1200;
+
+  String _formatGb(int bytes) => (bytes / 1e9).toStringAsFixed(2);
 
   @override
   Widget build(BuildContext context) {
+    final totalGb = (monthlyTxBytes + monthlyRxBytes) / 1e9;
+    final quotaPct = (totalGb / _quotaGb * 100).clamp(0, 999);
     return Padding(
       padding: const EdgeInsets.all(32),
       child: CustomScrollView(
@@ -29,15 +47,21 @@ class TelemetryTab extends StatelessWidget {
                   desc: '24-hour throughput and session diagnostics.',
                 ),
                 const SizedBox(height: 16),
-                const Wrap(
+                Wrap(
                   spacing: 12,
                   runSpacing: 12,
                   children: [
-                    _StatCard(label: 'Total Down', unit: 'GB'),
-                    _StatCard(label: 'Total Up', unit: 'GB'),
-                    _StatCard(label: 'Uptime', unit: '%'),
-                    _StatCard(label: 'Sessions', unit: ''),
+                    _StatCard(label: 'Total Down', unit: 'GB', value: _formatGb(monthlyRxBytes)),
+                    _StatCard(label: 'Total Up', unit: 'GB', value: _formatGb(monthlyTxBytes)),
+                    const _StatCard(label: 'Uptime', unit: '%'),
+                    const _StatCard(label: 'Sessions', unit: ''),
                   ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Bulan ini: ${totalGb.toStringAsFixed(2)} GB / $_quotaGb GB kuota '
+                  '(${quotaPct.toStringAsFixed(1)}%)',
+                  style: const TextStyle(fontFamily: CharonFonts.mono, fontSize: 12, color: CharonColors.muted),
                 ),
                 const SizedBox(height: 12),
                 UnitPlate(
@@ -54,8 +78,8 @@ class TelemetryTab extends StatelessWidget {
                       ),
                       const SizedBox(height: 24),
                       const Text(
-                        'Chart belum tersedia — nunggu Milestone 10 (traffic stats) yang sebelumnya '
-                        'di-defer.',
+                        'Chart belum tersedia — total & live throughput udah real (lihat stat card di atas '
+                        'dan Dashboard), grafik historis-nya sendiri belum digarap.',
                         style: TextStyle(color: CharonColors.muted, fontSize: 12),
                       ),
                       const SizedBox(height: 24),
@@ -97,10 +121,11 @@ class TelemetryTab extends StatelessWidget {
 }
 
 class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.unit});
+  const _StatCard({required this.label, required this.unit, this.value = '—'});
 
   final String label;
   final String unit;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
@@ -118,9 +143,9 @@ class _StatCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
-                const Text(
-                  '—',
-                  style: TextStyle(fontFamily: CharonFonts.mono, fontSize: 22, color: CharonColors.primaryBright),
+                Text(
+                  value,
+                  style: const TextStyle(fontFamily: CharonFonts.mono, fontSize: 22, color: CharonColors.primaryBright),
                 ),
                 if (unit.isNotEmpty) ...[
                   const SizedBox(width: 4),

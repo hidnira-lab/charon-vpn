@@ -77,4 +77,14 @@ sealed class CharonEvent with _$CharonEvent {
   /// exhausting all retries - the Dart side decides whether to fail over
   /// to another saved server profile.
   const factory CharonEvent.reconnectFailed() = CharonEvent_ReconnectFailed;
+
+  /// Cumulative tunnel bytes since process start (see
+  /// `AppEvent::TrafficSample`). Widened from `u64` to `i64` at this
+  /// boundary so Dart gets a plain `int` instead of `BigInt` - traffic
+  /// counts never realistically approach `i64::MAX`.
+  const factory CharonEvent.trafficSample({
+    required PlatformInt64 txBytes,
+    required PlatformInt64 rxBytes,
+  }) = CharonEvent_TrafficSample;
+  const factory CharonEvent.latencyMs({int? ms}) = CharonEvent_LatencyMs;
 }

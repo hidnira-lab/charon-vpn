@@ -143,7 +143,9 @@ impl eframe::App for CharonApp {
                 AppEvent::Blocked
                 | AppEvent::Reconnecting
                 | AppEvent::Reconnected
-                | AppEvent::ReconnectFailed => {}
+                | AppEvent::ReconnectFailed
+                | AppEvent::TrafficSample { .. }
+                | AppEvent::LatencyMs(_) => {}
             }
         }
 

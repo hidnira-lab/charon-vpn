@@ -551,6 +551,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         return CharonEvent_Reconnected();
       case 7:
         return CharonEvent_ReconnectFailed();
+      case 8:
+        return CharonEvent_TrafficSample(
+          txBytes: dco_decode_i_64(raw[1]),
+          rxBytes: dco_decode_i_64(raw[2]),
+        );
+      case 9:
+        return CharonEvent_LatencyMs(
+          ms: dco_decode_opt_box_autoadd_i_32(raw[1]),
+        );
       default:
         throw Exception("unreachable");
     }
@@ -560,6 +569,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   int dco_decode_i_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
+  }
+
+  @protected
+  PlatformInt64 dco_decode_i_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeI64(raw);
   }
 
   @protected
@@ -701,6 +716,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         return CharonEvent_Reconnected();
       case 7:
         return CharonEvent_ReconnectFailed();
+      case 8:
+        var var_txBytes = sse_decode_i_64(deserializer);
+        var var_rxBytes = sse_decode_i_64(deserializer);
+        return CharonEvent_TrafficSample(
+          txBytes: var_txBytes,
+          rxBytes: var_rxBytes,
+        );
+      case 9:
+        var var_ms = sse_decode_opt_box_autoadd_i_32(deserializer);
+        return CharonEvent_LatencyMs(ms: var_ms);
       default:
         throw UnimplementedError('');
     }
@@ -710,6 +735,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   int sse_decode_i_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getInt32();
+  }
+
+  @protected
+  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getPlatformInt64();
   }
 
   @protected
@@ -878,6 +909,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_32(6, serializer);
       case CharonEvent_ReconnectFailed():
         sse_encode_i_32(7, serializer);
+      case CharonEvent_TrafficSample(
+        txBytes: final txBytes,
+        rxBytes: final rxBytes,
+      ):
+        sse_encode_i_32(8, serializer);
+        sse_encode_i_64(txBytes, serializer);
+        sse_encode_i_64(rxBytes, serializer);
+      case CharonEvent_LatencyMs(ms: final ms):
+        sse_encode_i_32(9, serializer);
+        sse_encode_opt_box_autoadd_i_32(ms, serializer);
     }
   }
 
@@ -885,6 +926,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_i_32(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putInt32(self);
+  }
+
+  @protected
+  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putPlatformInt64(self);
   }
 
   @protected

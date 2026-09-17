@@ -1,8 +1,10 @@
+use std::net::{IpAddr, SocketAddr, TcpStream};
+use std::os::raw::c_void;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Sender};
-use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::sync::{Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 use crate::tunnel::TunnelHandle;
 use crate::xray::XrayProcess;
@@ -10,6 +12,33 @@ use crate::{AppEvent, Waker};
 
 const RECONNECT_DELAY: Duration = Duration::from_secs(5);
 const MAX_RECONNECT_ATTEMPTS: u32 = 5;
+const LATENCY_PROBE_INTERVAL: Duration = Duration::from_secs(5);
+const LATENCY_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
+
+/// Registered once per process in `Supervisor::new()` - `tun2proxy`'s
+/// traffic-status callback is itself a single global C-ABI slot, so there's
+/// no per-instance context to thread through it. A `Mutex` (rather than
+/// relying on `Sender`'s own thread-safety) keeps this call site free of
+/// unsafe pointer aliasing beyond what the callback signature itself
+/// requires.
+static TRAFFIC_TX: OnceLock<Mutex<Sender<AppEvent>>> = OnceLock::new();
+
+/// # Safety
+///
+/// Called by `tun2proxy`'s relay loop with a valid, non-null pointer to a
+/// `TrafficStatus` for the duration of the call - see its own doc comment.
+unsafe extern "C" fn traffic_callback(status: *const tun2proxy::TrafficStatus, _ctx: *mut c_void) {
+    if status.is_null() {
+        return;
+    }
+    let status = unsafe { *status };
+    if let Some(tx) = TRAFFIC_TX.get() {
+        let _ = tx.lock().unwrap().send(AppEvent::TrafficSample {
+            tx_bytes: status.tx,
+            rx_bytes: status.rx,
+        });
+    }
+}
 
 #[derive(Clone)]
 struct XrayConfig {
@@ -66,6 +95,10 @@ pub struct Supervisor(Arc<Inner>);
 
 impl Supervisor {
     pub fn new(external_tx: Sender<AppEvent>, waker: Waker) -> Self {
+        let _ = TRAFFIC_TX.set(Mutex::new(external_tx.clone()));
+        unsafe {
+            tun2proxy::tun2proxy_set_traffic_status_callback(1, Some(traffic_callback), std::ptr::null_mut());
+        }
         let (internal_tx, internal_rx) = mpsc::channel();
         let supervisor = Supervisor(Arc::new(Inner {
             external_tx,
@@ -80,7 +113,42 @@ impl Supervisor {
             waker,
         }));
         supervisor.clone().spawn_watcher(internal_rx);
+        supervisor.clone().spawn_latency_prober();
         supervisor
+    }
+
+    /// Runs for the lifetime of the app (same pattern as the health-watcher
+    /// in `xray.rs`) rather than being started/stopped per connect cycle -
+    /// it's a cheap no-op check each tick while disconnected. Doesn't go
+    /// through the tunnel: the server IP is always bypass-routed (Windows)
+    /// or the whole app is excluded from the VPN capture (Android), so this
+    /// measures the real RTT to the server, not a loop through our own TUN.
+    fn spawn_latency_prober(self) {
+        std::thread::spawn(move || loop {
+            std::thread::sleep(LATENCY_PROBE_INTERVAL);
+            if self.0.tunnel.lock().unwrap().is_none() {
+                continue;
+            }
+            let Some(server_ip) = self
+                .0
+                .tunnel_config
+                .lock()
+                .unwrap()
+                .as_ref()
+                .map(|c| c.server_ip.clone())
+            else {
+                continue;
+            };
+            let Ok(ip) = server_ip.parse::<IpAddr>() else {
+                continue;
+            };
+            let addr = SocketAddr::new(ip, 443);
+            let start = Instant::now();
+            let ms = TcpStream::connect_timeout(&addr, LATENCY_PROBE_TIMEOUT)
+                .ok()
+                .map(|_| start.elapsed().as_millis() as u32);
+            let _ = self.0.external_tx.send(AppEvent::LatencyMs(ms));
+        });
     }
 
     pub fn set_kill_switch(&self, enabled: bool) {

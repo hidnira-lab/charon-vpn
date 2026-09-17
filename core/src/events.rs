@@ -18,4 +18,14 @@ pub enum AppEvent {
     /// owns the profile list (the Dart side) to decide whether to try a
     /// different one.
     ReconnectFailed,
+    /// Cumulative bytes relayed through the tunnel since the process
+    /// started (tun2proxy's own counter - it resets only on a full app
+    /// restart, never on reconnect/dest-rotation failover). Sampled roughly
+    /// once a second while a tunnel is actively forwarding traffic.
+    TrafficSample { tx_bytes: u64, rx_bytes: u64 },
+    /// Round-trip TCP-connect time to the active profile's Reality port
+    /// (443), probed periodically while connected. `None` when the probe
+    /// itself fails or times out - the caller should hold its last-known
+    /// value rather than treat this as zero latency.
+    LatencyMs(Option<u32>),
 }

@@ -56,7 +56,7 @@ extension CharonEventPatterns on CharonEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( CharonEvent_XrayLog value)?  xrayLog,TResult Function( CharonEvent_TunnelLog value)?  tunnelLog,TResult Function( CharonEvent_TunnelStopped value)?  tunnelStopped,TResult Function( CharonEvent_XrayStopped value)?  xrayStopped,TResult Function( CharonEvent_Blocked value)?  blocked,TResult Function( CharonEvent_Reconnecting value)?  reconnecting,TResult Function( CharonEvent_Reconnected value)?  reconnected,TResult Function( CharonEvent_ReconnectFailed value)?  reconnectFailed,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( CharonEvent_XrayLog value)?  xrayLog,TResult Function( CharonEvent_TunnelLog value)?  tunnelLog,TResult Function( CharonEvent_TunnelStopped value)?  tunnelStopped,TResult Function( CharonEvent_XrayStopped value)?  xrayStopped,TResult Function( CharonEvent_Blocked value)?  blocked,TResult Function( CharonEvent_Reconnecting value)?  reconnecting,TResult Function( CharonEvent_Reconnected value)?  reconnected,TResult Function( CharonEvent_ReconnectFailed value)?  reconnectFailed,TResult Function( CharonEvent_TrafficSample value)?  trafficSample,TResult Function( CharonEvent_LatencyMs value)?  latencyMs,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog() when xrayLog != null:
@@ -67,7 +67,9 @@ return xrayStopped(_that);case CharonEvent_Blocked() when blocked != null:
 return blocked(_that);case CharonEvent_Reconnecting() when reconnecting != null:
 return reconnecting(_that);case CharonEvent_Reconnected() when reconnected != null:
 return reconnected(_that);case CharonEvent_ReconnectFailed() when reconnectFailed != null:
-return reconnectFailed(_that);case _:
+return reconnectFailed(_that);case CharonEvent_TrafficSample() when trafficSample != null:
+return trafficSample(_that);case CharonEvent_LatencyMs() when latencyMs != null:
+return latencyMs(_that);case _:
   return orElse();
 
 }
@@ -85,7 +87,7 @@ return reconnectFailed(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( CharonEvent_XrayLog value)  xrayLog,required TResult Function( CharonEvent_TunnelLog value)  tunnelLog,required TResult Function( CharonEvent_TunnelStopped value)  tunnelStopped,required TResult Function( CharonEvent_XrayStopped value)  xrayStopped,required TResult Function( CharonEvent_Blocked value)  blocked,required TResult Function( CharonEvent_Reconnecting value)  reconnecting,required TResult Function( CharonEvent_Reconnected value)  reconnected,required TResult Function( CharonEvent_ReconnectFailed value)  reconnectFailed,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( CharonEvent_XrayLog value)  xrayLog,required TResult Function( CharonEvent_TunnelLog value)  tunnelLog,required TResult Function( CharonEvent_TunnelStopped value)  tunnelStopped,required TResult Function( CharonEvent_XrayStopped value)  xrayStopped,required TResult Function( CharonEvent_Blocked value)  blocked,required TResult Function( CharonEvent_Reconnecting value)  reconnecting,required TResult Function( CharonEvent_Reconnected value)  reconnected,required TResult Function( CharonEvent_ReconnectFailed value)  reconnectFailed,required TResult Function( CharonEvent_TrafficSample value)  trafficSample,required TResult Function( CharonEvent_LatencyMs value)  latencyMs,}){
 final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog():
@@ -96,7 +98,9 @@ return xrayStopped(_that);case CharonEvent_Blocked():
 return blocked(_that);case CharonEvent_Reconnecting():
 return reconnecting(_that);case CharonEvent_Reconnected():
 return reconnected(_that);case CharonEvent_ReconnectFailed():
-return reconnectFailed(_that);}
+return reconnectFailed(_that);case CharonEvent_TrafficSample():
+return trafficSample(_that);case CharonEvent_LatencyMs():
+return latencyMs(_that);}
 }
 /// A variant of `map` that fallback to returning `null`.
 ///
@@ -110,7 +114,7 @@ return reconnectFailed(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( CharonEvent_XrayLog value)?  xrayLog,TResult? Function( CharonEvent_TunnelLog value)?  tunnelLog,TResult? Function( CharonEvent_TunnelStopped value)?  tunnelStopped,TResult? Function( CharonEvent_XrayStopped value)?  xrayStopped,TResult? Function( CharonEvent_Blocked value)?  blocked,TResult? Function( CharonEvent_Reconnecting value)?  reconnecting,TResult? Function( CharonEvent_Reconnected value)?  reconnected,TResult? Function( CharonEvent_ReconnectFailed value)?  reconnectFailed,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( CharonEvent_XrayLog value)?  xrayLog,TResult? Function( CharonEvent_TunnelLog value)?  tunnelLog,TResult? Function( CharonEvent_TunnelStopped value)?  tunnelStopped,TResult? Function( CharonEvent_XrayStopped value)?  xrayStopped,TResult? Function( CharonEvent_Blocked value)?  blocked,TResult? Function( CharonEvent_Reconnecting value)?  reconnecting,TResult? Function( CharonEvent_Reconnected value)?  reconnected,TResult? Function( CharonEvent_ReconnectFailed value)?  reconnectFailed,TResult? Function( CharonEvent_TrafficSample value)?  trafficSample,TResult? Function( CharonEvent_LatencyMs value)?  latencyMs,}){
 final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog() when xrayLog != null:
@@ -121,7 +125,9 @@ return xrayStopped(_that);case CharonEvent_Blocked() when blocked != null:
 return blocked(_that);case CharonEvent_Reconnecting() when reconnecting != null:
 return reconnecting(_that);case CharonEvent_Reconnected() when reconnected != null:
 return reconnected(_that);case CharonEvent_ReconnectFailed() when reconnectFailed != null:
-return reconnectFailed(_that);case _:
+return reconnectFailed(_that);case CharonEvent_TrafficSample() when trafficSample != null:
+return trafficSample(_that);case CharonEvent_LatencyMs() when latencyMs != null:
+return latencyMs(_that);case _:
   return null;
 
 }
@@ -138,7 +144,7 @@ return reconnectFailed(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String field0)?  xrayLog,TResult Function( String field0)?  tunnelLog,TResult Function( bool ok,  String? message)?  tunnelStopped,TResult Function( int? code)?  xrayStopped,TResult Function()?  blocked,TResult Function()?  reconnecting,TResult Function()?  reconnected,TResult Function()?  reconnectFailed,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String field0)?  xrayLog,TResult Function( String field0)?  tunnelLog,TResult Function( bool ok,  String? message)?  tunnelStopped,TResult Function( int? code)?  xrayStopped,TResult Function()?  blocked,TResult Function()?  reconnecting,TResult Function()?  reconnected,TResult Function()?  reconnectFailed,TResult Function( PlatformInt64 txBytes,  PlatformInt64 rxBytes)?  trafficSample,TResult Function( int? ms)?  latencyMs,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog() when xrayLog != null:
 return xrayLog(_that.field0);case CharonEvent_TunnelLog() when tunnelLog != null:
@@ -148,7 +154,9 @@ return xrayStopped(_that.code);case CharonEvent_Blocked() when blocked != null:
 return blocked();case CharonEvent_Reconnecting() when reconnecting != null:
 return reconnecting();case CharonEvent_Reconnected() when reconnected != null:
 return reconnected();case CharonEvent_ReconnectFailed() when reconnectFailed != null:
-return reconnectFailed();case _:
+return reconnectFailed();case CharonEvent_TrafficSample() when trafficSample != null:
+return trafficSample(_that.txBytes,_that.rxBytes);case CharonEvent_LatencyMs() when latencyMs != null:
+return latencyMs(_that.ms);case _:
   return orElse();
 
 }
@@ -166,7 +174,7 @@ return reconnectFailed();case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String field0)  xrayLog,required TResult Function( String field0)  tunnelLog,required TResult Function( bool ok,  String? message)  tunnelStopped,required TResult Function( int? code)  xrayStopped,required TResult Function()  blocked,required TResult Function()  reconnecting,required TResult Function()  reconnected,required TResult Function()  reconnectFailed,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String field0)  xrayLog,required TResult Function( String field0)  tunnelLog,required TResult Function( bool ok,  String? message)  tunnelStopped,required TResult Function( int? code)  xrayStopped,required TResult Function()  blocked,required TResult Function()  reconnecting,required TResult Function()  reconnected,required TResult Function()  reconnectFailed,required TResult Function( PlatformInt64 txBytes,  PlatformInt64 rxBytes)  trafficSample,required TResult Function( int? ms)  latencyMs,}) {final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog():
 return xrayLog(_that.field0);case CharonEvent_TunnelLog():
@@ -176,7 +184,9 @@ return xrayStopped(_that.code);case CharonEvent_Blocked():
 return blocked();case CharonEvent_Reconnecting():
 return reconnecting();case CharonEvent_Reconnected():
 return reconnected();case CharonEvent_ReconnectFailed():
-return reconnectFailed();}
+return reconnectFailed();case CharonEvent_TrafficSample():
+return trafficSample(_that.txBytes,_that.rxBytes);case CharonEvent_LatencyMs():
+return latencyMs(_that.ms);}
 }
 /// A variant of `when` that fallback to returning `null`
 ///
@@ -190,7 +200,7 @@ return reconnectFailed();}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String field0)?  xrayLog,TResult? Function( String field0)?  tunnelLog,TResult? Function( bool ok,  String? message)?  tunnelStopped,TResult? Function( int? code)?  xrayStopped,TResult? Function()?  blocked,TResult? Function()?  reconnecting,TResult? Function()?  reconnected,TResult? Function()?  reconnectFailed,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String field0)?  xrayLog,TResult? Function( String field0)?  tunnelLog,TResult? Function( bool ok,  String? message)?  tunnelStopped,TResult? Function( int? code)?  xrayStopped,TResult? Function()?  blocked,TResult? Function()?  reconnecting,TResult? Function()?  reconnected,TResult? Function()?  reconnectFailed,TResult? Function( PlatformInt64 txBytes,  PlatformInt64 rxBytes)?  trafficSample,TResult? Function( int? ms)?  latencyMs,}) {final _that = this;
 switch (_that) {
 case CharonEvent_XrayLog() when xrayLog != null:
 return xrayLog(_that.field0);case CharonEvent_TunnelLog() when tunnelLog != null:
@@ -200,7 +210,9 @@ return xrayStopped(_that.code);case CharonEvent_Blocked() when blocked != null:
 return blocked();case CharonEvent_Reconnecting() when reconnecting != null:
 return reconnecting();case CharonEvent_Reconnected() when reconnected != null:
 return reconnected();case CharonEvent_ReconnectFailed() when reconnectFailed != null:
-return reconnectFailed();case _:
+return reconnectFailed();case CharonEvent_TrafficSample() when trafficSample != null:
+return trafficSample(_that.txBytes,_that.rxBytes);case CharonEvent_LatencyMs() when latencyMs != null:
+return latencyMs(_that.ms);case _:
   return null;
 
 }
@@ -609,5 +621,143 @@ String toString() {
 
 
 
+
+/// @nodoc
+
+
+class CharonEvent_TrafficSample extends CharonEvent {
+  const CharonEvent_TrafficSample({required this.txBytes, required this.rxBytes}): super._();
+  
+
+ final  PlatformInt64 txBytes;
+ final  PlatformInt64 rxBytes;
+
+/// Create a copy of CharonEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CharonEvent_TrafficSampleCopyWith<CharonEvent_TrafficSample> get copyWith => _$CharonEvent_TrafficSampleCopyWithImpl<CharonEvent_TrafficSample>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is CharonEvent_TrafficSample&&(identical(other.txBytes, txBytes) || other.txBytes == txBytes)&&(identical(other.rxBytes, rxBytes) || other.rxBytes == rxBytes));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,txBytes,rxBytes);
+}
+
+@override
+String toString() {
+    return 'CharonEvent.trafficSample(txBytes: $txBytes, rxBytes: $rxBytes)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CharonEvent_TrafficSampleCopyWith<$Res> implements $CharonEventCopyWith<$Res> {
+  factory $CharonEvent_TrafficSampleCopyWith(CharonEvent_TrafficSample value, $Res Function(CharonEvent_TrafficSample) _then) = _$CharonEvent_TrafficSampleCopyWithImpl;
+@useResult
+$Res call({
+ PlatformInt64 txBytes, PlatformInt64 rxBytes
+});
+
+
+
+
+}
+/// @nodoc
+class _$CharonEvent_TrafficSampleCopyWithImpl<$Res>
+    implements $CharonEvent_TrafficSampleCopyWith<$Res> {
+  _$CharonEvent_TrafficSampleCopyWithImpl(this._self, this._then);
+
+  final CharonEvent_TrafficSample _self;
+  final $Res Function(CharonEvent_TrafficSample) _then;
+
+/// Create a copy of CharonEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? txBytes = null,Object? rxBytes = null,}) {
+  return _then(CharonEvent_TrafficSample(
+txBytes: null == txBytes ? _self.txBytes : txBytes // ignore: cast_nullable_to_non_nullable
+as PlatformInt64,rxBytes: null == rxBytes ? _self.rxBytes : rxBytes // ignore: cast_nullable_to_non_nullable
+as PlatformInt64,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class CharonEvent_LatencyMs extends CharonEvent {
+  const CharonEvent_LatencyMs({this.ms}): super._();
+  
+
+ final  int? ms;
+
+/// Create a copy of CharonEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CharonEvent_LatencyMsCopyWith<CharonEvent_LatencyMs> get copyWith => _$CharonEvent_LatencyMsCopyWithImpl<CharonEvent_LatencyMs>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is CharonEvent_LatencyMs&&(identical(other.ms, ms) || other.ms == ms));
+}
+
+
+@override
+int get hashCode {
+    return Object.hash(runtimeType,ms);
+}
+
+@override
+String toString() {
+    return 'CharonEvent.latencyMs(ms: $ms)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CharonEvent_LatencyMsCopyWith<$Res> implements $CharonEventCopyWith<$Res> {
+  factory $CharonEvent_LatencyMsCopyWith(CharonEvent_LatencyMs value, $Res Function(CharonEvent_LatencyMs) _then) = _$CharonEvent_LatencyMsCopyWithImpl;
+@useResult
+$Res call({
+ int? ms
+});
+
+
+
+
+}
+/// @nodoc
+class _$CharonEvent_LatencyMsCopyWithImpl<$Res>
+    implements $CharonEvent_LatencyMsCopyWith<$Res> {
+  _$CharonEvent_LatencyMsCopyWithImpl(this._self, this._then);
+
+  final CharonEvent_LatencyMs _self;
+  final $Res Function(CharonEvent_LatencyMs) _then;
+
+/// Create a copy of CharonEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? ms = freezed,}) {
+  return _then(CharonEvent_LatencyMs(
+ms: freezed == ms ? _self.ms : ms // ignore: cast_nullable_to_non_nullable
+as int?,
+  ));
+}
+
+
+}
 
 // dart format on

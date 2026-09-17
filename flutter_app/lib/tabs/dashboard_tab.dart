@@ -14,6 +14,9 @@ class DashboardTab extends StatelessWidget {
     required this.activeProfileName,
     required this.activeProfileIp,
     required this.sessionLabel,
+    required this.downMbps,
+    required this.upMbps,
+    required this.latencyMs,
     required this.onToggle,
   });
 
@@ -23,6 +26,9 @@ class DashboardTab extends StatelessWidget {
   final String? activeProfileName;
   final String? activeProfileIp;
   final String sessionLabel;
+  final double downMbps;
+  final double upMbps;
+  final int? latencyMs;
   final VoidCallback onToggle;
 
   @override
@@ -68,6 +74,9 @@ class DashboardTab extends StatelessWidget {
                 activeProfileName: activeProfileName,
                 activeProfileIp: activeProfileIp,
                 sessionLabel: sessionLabel,
+                downMbps: downMbps,
+                upMbps: upMbps,
+                latencyMs: latencyMs,
               );
               if (constraints.maxWidth >= 760) {
                 return Row(
@@ -224,12 +233,18 @@ class _InfoColumn extends StatelessWidget {
     required this.activeProfileName,
     required this.activeProfileIp,
     required this.sessionLabel,
+    required this.downMbps,
+    required this.upMbps,
+    required this.latencyMs,
   });
 
   final bool connected;
   final String? activeProfileName;
   final String? activeProfileIp;
   final String sessionLabel;
+  final double downMbps;
+  final double upMbps;
+  final int? latencyMs;
 
   @override
   Widget build(BuildContext context) {
@@ -260,9 +275,21 @@ class _InfoColumn extends StatelessWidget {
                   ),
                   Readout(label: 'Session', value: connected ? sessionLabel : '00:00:00'),
                   const Readout(label: 'Protocol', value: 'VLESS', unit: 'Reality'),
-                  const Readout(label: 'Latency', value: '—', unit: 'ms'),
-                  const Readout(label: 'Down', value: '—', unit: 'Mbps'),
-                  const Readout(label: 'Up', value: '—', unit: 'Mbps'),
+                  Readout(
+                    label: 'Latency',
+                    value: connected && latencyMs != null ? '$latencyMs' : '—',
+                    unit: 'ms',
+                  ),
+                  Readout(
+                    label: 'Down',
+                    value: connected ? downMbps.toStringAsFixed(1) : '—',
+                    unit: 'Mbps',
+                  ),
+                  Readout(
+                    label: 'Up',
+                    value: connected ? upMbps.toStringAsFixed(1) : '—',
+                    unit: 'Mbps',
+                  ),
                 ],
               ),
             ],

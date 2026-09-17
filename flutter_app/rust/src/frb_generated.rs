@@ -591,6 +591,18 @@ impl SseDecode for crate::api::simple::CharonEvent {
             7 => {
                 return crate::api::simple::CharonEvent::ReconnectFailed;
             }
+            8 => {
+                let mut var_txBytes = <i64>::sse_decode(deserializer);
+                let mut var_rxBytes = <i64>::sse_decode(deserializer);
+                return crate::api::simple::CharonEvent::TrafficSample {
+                    tx_bytes: var_txBytes,
+                    rx_bytes: var_rxBytes,
+                };
+            }
+            9 => {
+                let mut var_ms = <Option<i32>>::sse_decode(deserializer);
+                return crate::api::simple::CharonEvent::LatencyMs { ms: var_ms };
+            }
             _ => {
                 unimplemented!("");
             }
@@ -602,6 +614,13 @@ impl SseDecode for i32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         deserializer.cursor.read_i32::<NativeEndian>().unwrap()
+    }
+}
+
+impl SseDecode for i64 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        deserializer.cursor.read_i64::<NativeEndian>().unwrap()
     }
 }
 
@@ -771,6 +790,15 @@ impl flutter_rust_bridge::IntoDart for crate::api::simple::CharonEvent {
             crate::api::simple::CharonEvent::Reconnecting => [5.into_dart()].into_dart(),
             crate::api::simple::CharonEvent::Reconnected => [6.into_dart()].into_dart(),
             crate::api::simple::CharonEvent::ReconnectFailed => [7.into_dart()].into_dart(),
+            crate::api::simple::CharonEvent::TrafficSample { tx_bytes, rx_bytes } => [
+                8.into_dart(),
+                tx_bytes.into_into_dart().into_dart(),
+                rx_bytes.into_into_dart().into_dart(),
+            ]
+            .into_dart(),
+            crate::api::simple::CharonEvent::LatencyMs { ms } => {
+                [9.into_dart(), ms.into_into_dart().into_dart()].into_dart()
+            }
             _ => {
                 unimplemented!("");
             }
@@ -870,6 +898,15 @@ impl SseEncode for crate::api::simple::CharonEvent {
             crate::api::simple::CharonEvent::ReconnectFailed => {
                 <i32>::sse_encode(7, serializer);
             }
+            crate::api::simple::CharonEvent::TrafficSample { tx_bytes, rx_bytes } => {
+                <i32>::sse_encode(8, serializer);
+                <i64>::sse_encode(tx_bytes, serializer);
+                <i64>::sse_encode(rx_bytes, serializer);
+            }
+            crate::api::simple::CharonEvent::LatencyMs { ms } => {
+                <i32>::sse_encode(9, serializer);
+                <Option<i32>>::sse_encode(ms, serializer);
+            }
             _ => {
                 unimplemented!("");
             }
@@ -881,6 +918,13 @@ impl SseEncode for i32 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         serializer.cursor.write_i32::<NativeEndian>(self).unwrap();
+    }
+}
+
+impl SseEncode for i64 {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        serializer.cursor.write_i64::<NativeEndian>(self).unwrap();
     }
 }
 

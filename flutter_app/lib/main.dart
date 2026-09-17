@@ -12,6 +12,7 @@ import 'design/design.dart';
 import 'profile_form_dialog.dart';
 import 'server_profiles.dart';
 import 'split_tunnel.dart';
+import 'traffic_store.dart';
 import 'tabs/config_tab.dart';
 import 'tabs/dashboard_tab.dart';
 import 'tabs/devices_tab.dart';
@@ -67,6 +68,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
   final _profileStore = ProfileStore();
   final _appSettings = AppSettings();
   final _splitTunnelStore = SplitTunnelStore();
+  final _trafficStore = TrafficStore();
   final _logs = <String>[];
   final _scrollController = ScrollController();
   StreamSubscription<CharonEvent>? _eventSub;
@@ -102,6 +104,19 @@ class _CharonHomePageState extends State<CharonHomePage> {
 
   DateTime? _connectedAt;
   Duration _elapsed = Duration.zero;
+
+  /// Live throughput, derived from consecutive `TrafficSample` events -
+  /// purely in-memory, resets on disconnect. `_monthlyTxBytes`/`Rx` are the
+  /// persisted running totals for the current calendar month (see
+  /// `TrafficStore`), compared against the server's 1200GB/month quota.
+  double _downMbps = 0;
+  double _upMbps = 0;
+  int? _latencyMs;
+  int _monthlyTxBytes = 0;
+  int _monthlyRxBytes = 0;
+  int? _lastSampleTx;
+  int? _lastSampleRx;
+  DateTime? _lastSampleTime;
 
   ServerProfile? get _activeProfile {
     for (final profile in _profiles) {
@@ -145,6 +160,11 @@ class _CharonHomePageState extends State<CharonHomePage> {
     });
     final autoConnect = await _appSettings.loadAutoConnect();
     setState(() => _autoConnect = autoConnect);
+    final totals = await _trafficStore.loadTotals();
+    setState(() {
+      _monthlyTxBytes = totals.$1;
+      _monthlyRxBytes = totals.$2;
+    });
     if (autoConnect && _activeProfile != null) {
       await _engage();
     }
@@ -392,6 +412,42 @@ class _CharonHomePageState extends State<CharonHomePage> {
     setState(() {
       _connectedAt = null;
       _elapsed = Duration.zero;
+      _downMbps = 0;
+      _upMbps = 0;
+      _latencyMs = null;
+      _lastSampleTx = null;
+      _lastSampleRx = null;
+      _lastSampleTime = null;
+    });
+  }
+
+  /// `tx`/`rx` are cumulative since process start (see
+  /// `AppEvent::TrafficSample`'s doc comment) - live Mbps comes from the
+  /// delta against the previous sample, the persisted monthly quota total
+  /// comes from `TrafficStore` doing the same delta accounting itself
+  /// (independently, since it also has to survive app restarts).
+  Future<void> _onTrafficSample(int tx, int rx) async {
+    final now = DateTime.now();
+    final lastTx = _lastSampleTx;
+    final lastRx = _lastSampleRx;
+    final lastTime = _lastSampleTime;
+    if (lastTx != null && lastRx != null && lastTime != null && tx >= lastTx && rx >= lastRx) {
+      final dtSeconds = now.difference(lastTime).inMilliseconds / 1000.0;
+      if (dtSeconds > 0) {
+        setState(() {
+          _upMbps = (tx - lastTx) * 8 / dtSeconds / 1e6;
+          _downMbps = (rx - lastRx) * 8 / dtSeconds / 1e6;
+        });
+      }
+    }
+    _lastSampleTx = tx;
+    _lastSampleRx = rx;
+    _lastSampleTime = now;
+    final totals = await _trafficStore.recordSample(tx, rx);
+    if (!mounted) return;
+    setState(() {
+      _monthlyTxBytes = totals.$1;
+      _monthlyRxBytes = totals.$2;
     });
   }
 
@@ -426,6 +482,10 @@ class _CharonHomePageState extends State<CharonHomePage> {
         _pushLog('[app] reconnected');
       case CharonEvent_ReconnectFailed():
         _handleReconnectFailed();
+      case CharonEvent_TrafficSample(:final txBytes, :final rxBytes):
+        _onTrafficSample(txBytes, rxBytes);
+      case CharonEvent_LatencyMs(:final ms):
+        setState(() => _latencyMs = ms);
     }
   }
 
@@ -713,7 +773,12 @@ class _CharonHomePageState extends State<CharonHomePage> {
           onAutoReconnectChanged: _setAutoReconnect,
         );
       case 4:
-        return TelemetryTab(logs: _logs, scrollController: _scrollController);
+        return TelemetryTab(
+          logs: _logs,
+          scrollController: _scrollController,
+          monthlyTxBytes: _monthlyTxBytes,
+          monthlyRxBytes: _monthlyRxBytes,
+        );
       case 5:
         return DevicesTab(
           serverIp: _activeProfile?.serverIp,
@@ -731,6 +796,9 @@ class _CharonHomePageState extends State<CharonHomePage> {
           activeProfileName: _activeProfile?.name,
           activeProfileIp: _activeProfile?.serverIp,
           sessionLabel: _formatElapsed(_elapsed),
+          downMbps: _downMbps,
+          upMbps: _upMbps,
+          latencyMs: _latencyMs,
           onToggle: _onToggleConnection,
         );
     }
