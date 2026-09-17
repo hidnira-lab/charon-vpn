@@ -128,6 +128,19 @@ impl eframe::App for CharonApp {
                     self.push_log("[app] resetting network to clear any leftover routes...".to_string());
                     platform::windows_network_reset::run(self.tx.clone());
                 }
+                AppEvent::XrayStopped(code) => {
+                    self.xray = None;
+                    self.push_log(format!(
+                        "[app] xray stopped unexpectedly (code: {})",
+                        code.map(|c| c.to_string()).unwrap_or_else(|| "?".to_string())
+                    ));
+                }
+                // This app doesn't use `charon_core::supervisor::Supervisor`
+                // (kill switch/auto-reconnect are Flutter-only, see
+                // Milestone 8) - these variants are never actually emitted
+                // in its event flow, but the match still has to be
+                // exhaustive over `AppEvent`.
+                AppEvent::Blocked | AppEvent::Reconnecting | AppEvent::Reconnected => {}
             }
         }
 
