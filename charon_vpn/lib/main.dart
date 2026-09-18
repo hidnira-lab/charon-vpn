@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:charon_vpn/src/rust/api/simple.dart';
 import 'package:charon_vpn/src/rust/frb_generated.dart';
+import 'package:tray_manager/tray_manager.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'android_channel.dart';
 import 'app_settings.dart';
@@ -13,6 +15,7 @@ import 'profile_form_dialog.dart';
 import 'server_profiles.dart';
 import 'split_tunnel.dart';
 import 'traffic_store.dart';
+import 'windows_startup.dart';
 import 'tabs/config_tab.dart';
 import 'tabs/dashboard_tab.dart';
 import 'tabs/devices_tab.dart';
@@ -38,12 +41,30 @@ Directory _windowsWorkspaceRoot() {
   return dir;
 }
 
-Future<void> main() async {
+Future<void> main(List<String> args) async {
+  WidgetsFlutterBinding.ensureInitialized();
   await RustLib.init();
   // Loaded before `runApp` (not in `initState`) so the very first frame
   // already renders in the right theme instead of flashing dark then
   // switching once `_bootstrap` catches up.
   CharonColors.isLight.value = await AppSettings().loadLightMode();
+  if (Platform.isWindows) {
+    // `--minimized` is passed by the Task Scheduler entry registered via
+    // "Launch at startup" (see `_setLaunchAtStartup` below) - a normal
+    // double-click/Start Menu launch never has it, so the window shows as
+    // usual in that case.
+    final startMinimized = args.contains('--minimized');
+    await windowManager.ensureInitialized();
+    await windowManager.waitUntilReadyToShow(const WindowOptions(), () async {
+      await windowManager.setPreventClose(true);
+      if (startMinimized) {
+        await windowManager.setSkipTaskbar(true);
+      } else {
+        await windowManager.show();
+        await windowManager.focus();
+      }
+    });
+  }
   runApp(const CharonApp());
 }
 
@@ -72,7 +93,7 @@ class CharonHomePage extends StatefulWidget {
   State<CharonHomePage> createState() => _CharonHomePageState();
 }
 
-class _CharonHomePageState extends State<CharonHomePage> {
+class _CharonHomePageState extends State<CharonHomePage> with WindowListener, TrayListener {
   final _bridge = CharonBridge();
   final _profileStore = ProfileStore();
   final _appSettings = AppSettings();
@@ -111,6 +132,7 @@ class _CharonHomePageState extends State<CharonHomePage> {
   bool _autoReconnect = false;
   bool _autoConnect = false;
   bool _lightMode = false;
+  bool _launchAtStartup = false;
 
   DateTime? _connectedAt;
   Duration _elapsed = Duration.zero;
@@ -127,6 +149,15 @@ class _CharonHomePageState extends State<CharonHomePage> {
   int? _lastSampleTx;
   int? _lastSampleRx;
   DateTime? _lastSampleTime;
+
+  /// Rolling in-memory window for the Telemetry throughput chart - not
+  /// persisted and not a real 24h history (that'd mean storing 86400
+  /// one-second samples surviving app restarts, which nobody asked for).
+  /// Capped to the current session, reset on disconnect same as
+  /// `_downMbps`/`_upMbps` above.
+  static const _throughputHistoryLimit = 300; // ~5 min at 1 sample/sec
+  final List<double> _downHistory = [];
+  final List<double> _upHistory = [];
 
   ServerProfile? get _activeProfile {
     for (final profile in _profiles) {
@@ -150,12 +181,46 @@ class _CharonHomePageState extends State<CharonHomePage> {
     if (Platform.isAndroid) {
       androidVpnChannel.setMethodCallHandler(_onAndroidChannelCall);
     }
+    if (Platform.isWindows) {
+      windowManager.addListener(this);
+      trayManager.addListener(this);
+      _initTray();
+    }
     _sessionTicker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_connectedAt != null) {
         setState(() => _elapsed = DateTime.now().difference(_connectedAt!));
       }
+      _updateAndroidNotification();
     });
     _bootstrap();
+  }
+
+  /// Keeps the foreground-service notification (required to stay alive in
+  /// the background at all, see `CharonVpnService`) showing live status
+  /// instead of the static "Tunnel active" it starts with. No-op once the
+  /// service itself is gone (`_tunnelRunning == false`) - there's nothing to
+  /// update at that point.
+  String _androidNotificationText() {
+    if (_blocked) return 'Blocked - kill switch active';
+    switch (_connState) {
+      case ConnState.connected:
+        return 'Connected - Down ${_downMbps.toStringAsFixed(1)} / Up ${_upMbps.toStringAsFixed(1)} Mbps';
+      case ConnState.connecting:
+        return 'Connecting...';
+      case ConnState.reconnecting:
+        return 'Reconnecting...';
+      case ConnState.disconnected:
+        return 'Tunnel active';
+    }
+  }
+
+  Future<void> _updateAndroidNotification() async {
+    if (!Platform.isAndroid || !_tunnelRunning) return;
+    try {
+      await androidVpnChannel.invokeMethod('updateNotification', {'text': _androidNotificationText()});
+    } catch (_) {
+      // Best-effort - a missed notification update isn't worth surfacing.
+    }
   }
 
   /// Runs once at startup (unlike `_loadProfiles`, which also re-runs after
@@ -171,6 +236,10 @@ class _CharonHomePageState extends State<CharonHomePage> {
     });
     final autoConnect = await _appSettings.loadAutoConnect();
     setState(() => _autoConnect = autoConnect);
+    if (Platform.isWindows) {
+      final launchAtStartup = await _appSettings.loadLaunchAtStartup();
+      setState(() => _launchAtStartup = launchAtStartup);
+    }
     final totals = await _trafficStore.loadTotals();
     setState(() {
       _monthlyTxBytes = totals.$1;
@@ -192,12 +261,112 @@ class _CharonHomePageState extends State<CharonHomePage> {
     setState(() => _lightMode = enabled);
   }
 
+  Future<void> _setLaunchAtStartupPref(bool enabled) async {
+    final error = await setLaunchAtStartup(enabled);
+    if (error != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mengatur launch-at-startup: $error')),
+        );
+      }
+      return;
+    }
+    await _appSettings.saveLaunchAtStartup(enabled);
+    setState(() => _launchAtStartup = enabled);
+  }
+
   @override
   void dispose() {
     _eventSub?.cancel();
     _sessionTicker?.cancel();
     _scrollController.dispose();
+    if (Platform.isWindows) {
+      windowManager.removeListener(this);
+      trayManager.removeListener(this);
+    }
     super.dispose();
+  }
+
+  Future<void> _initTray() async {
+    await trayManager.setIcon('assets/icon/tray_icon.ico');
+    await trayManager.setToolTip('Charon VPN');
+    await trayManager.setContextMenu(
+      Menu(items: [
+        MenuItem(key: 'show_window', label: 'Show Charon VPN'),
+        MenuItem.separator(),
+        MenuItem(key: 'quit_app', label: 'Quit'),
+      ]),
+    );
+  }
+
+  Future<void> _showFromTray() async {
+    await windowManager.setSkipTaskbar(false);
+    await windowManager.show();
+    await windowManager.focus();
+  }
+
+  /// Shared exit path for both the window's X button and the tray "Quit"
+  /// menu item - minimizing is what sends the app to the tray now (see
+  /// `onWindowMinimize` below), so closing/quitting means a real exit.
+  /// Blocks + warns instead of auto-disconnecting while still connected -
+  /// same "tell the user, don't act for them" pattern as `_selectProfile`/
+  /// `_deleteProfile` above, so exiting never silently drops the tunnel.
+  Future<void> _requestExit() async {
+    if (_xrayRunning || _tunnelRunning) {
+      await _showFromTray();
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Masih connect'),
+          content: const Text('Charon VPN masih connect. Disconnect dulu sebelum keluar.'),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
+          ],
+        ),
+      );
+      return;
+    }
+    // `windowManager.destroy()` posts WM_QUIT and waits for a graceful
+    // Flutter engine teardown, which felt noticeably slow - a hard `exit(0)`
+    // is safe here since this line only runs once xray/tunnel are already
+    // confirmed stopped (the guard above), so there's nothing left to clean
+    // up first.
+    exit(0);
+  }
+
+  @override
+  void onWindowClose() {
+    _requestExit();
+  }
+
+  @override
+  void onWindowMinimize() {
+    windowManager.hide();
+    windowManager.setSkipTaskbar(true);
+  }
+
+  @override
+  void onTrayIconMouseDown() {
+    _showFromTray();
+  }
+
+  /// Windows only sends the raw click event here - unlike some other
+  /// platforms, it never opens the context menu on its own, so
+  /// `popUpContextMenu()` has to be called explicitly in response.
+  @override
+  void onTrayIconRightMouseDown() {
+    trayManager.popUpContextMenu();
+  }
+
+  @override
+  void onTrayMenuItemClick(MenuItem menuItem) {
+    switch (menuItem.key) {
+      case 'show_window':
+        _showFromTray();
+      case 'quit_app':
+        _requestExit();
+    }
   }
 
   Future<void> _loadProfiles() async {
@@ -435,6 +604,8 @@ class _CharonHomePageState extends State<CharonHomePage> {
       _lastSampleTx = null;
       _lastSampleRx = null;
       _lastSampleTime = null;
+      _downHistory.clear();
+      _upHistory.clear();
     });
   }
 
@@ -454,6 +625,10 @@ class _CharonHomePageState extends State<CharonHomePage> {
         setState(() {
           _upMbps = (tx - lastTx) * 8 / dtSeconds / 1e6;
           _downMbps = (rx - lastRx) * 8 / dtSeconds / 1e6;
+          _downHistory.add(_downMbps);
+          _upHistory.add(_upMbps);
+          if (_downHistory.length > _throughputHistoryLimit) _downHistory.removeAt(0);
+          if (_upHistory.length > _throughputHistoryLimit) _upHistory.removeAt(0);
         });
       }
     }
@@ -795,6 +970,8 @@ class _CharonHomePageState extends State<CharonHomePage> {
           scrollController: _scrollController,
           monthlyTxBytes: _monthlyTxBytes,
           monthlyRxBytes: _monthlyRxBytes,
+          downHistory: _downHistory,
+          upHistory: _upHistory,
         );
       case 5:
         return DevicesTab(
@@ -808,6 +985,8 @@ class _CharonHomePageState extends State<CharonHomePage> {
           onAutoConnectChanged: _setAutoConnectPref,
           lightMode: _lightMode,
           onLightModeChanged: _setLightModePref,
+          launchAtStartup: _launchAtStartup,
+          onLaunchAtStartupChanged: _setLaunchAtStartupPref,
         );
       case 0:
       default:

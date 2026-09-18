@@ -1,12 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../design/design.dart';
 
-/// Restyled per Milestone 6.4, light mode toggle added in Milestone 13. Only
-/// "Auto-connect on launch" and "Light mode" are wired to real behavior —
-/// the other three rows mirror the reference layout but have no logic
-/// behind them (notifications/launch-at-startup/telemetry aren't
-/// implemented); the caption below says so explicitly.
+/// Restyled per Milestone 6.4, light mode toggle added in Milestone 13,
+/// launch-at-startup wired to a real Task Scheduler entry in Milestone 15
+/// (Windows only - Android boot-launch is still out of scope, see
+/// `needs/feature-brief.md`). "Desktop notifications" and "Anonymous
+/// telemetry" remain placeholders — the caption below says so explicitly.
 class ConfigTab extends StatefulWidget {
   const ConfigTab({
     super.key,
@@ -14,12 +16,16 @@ class ConfigTab extends StatefulWidget {
     required this.onAutoConnectChanged,
     required this.lightMode,
     required this.onLightModeChanged,
+    required this.launchAtStartup,
+    required this.onLaunchAtStartupChanged,
   });
 
   final bool autoConnect;
   final ValueChanged<bool> onAutoConnectChanged;
   final bool lightMode;
   final ValueChanged<bool> onLightModeChanged;
+  final bool launchAtStartup;
+  final ValueChanged<bool> onLaunchAtStartupChanged;
 
   @override
   State<ConfigTab> createState() => _ConfigTabState();
@@ -27,7 +33,6 @@ class ConfigTab extends StatefulWidget {
 
 class _ConfigTabState extends State<ConfigTab> {
   bool _notify = true;
-  bool _launchAtStartup = false;
   bool _telemetry = true;
 
   @override
@@ -64,13 +69,15 @@ class _ConfigTabState extends State<ConfigTab> {
                   value: _notify,
                   onChanged: (v) => setState(() => _notify = v),
                 ),
-                Divider(height: 1, color: CharonColors.steel),
-                _SettingRow(
-                  title: 'Launch at startup',
-                  desc: 'Start Charon minimized when the system boots.',
-                  value: _launchAtStartup,
-                  onChanged: (v) => setState(() => _launchAtStartup = v),
-                ),
+                if (Platform.isWindows) ...[
+                  Divider(height: 1, color: CharonColors.steel),
+                  _SettingRow(
+                    title: 'Launch at startup',
+                    desc: 'Start Charon minimized to the system tray when Windows boots.',
+                    value: widget.launchAtStartup,
+                    onChanged: widget.onLaunchAtStartupChanged,
+                  ),
+                ],
                 Divider(height: 1, color: CharonColors.steel),
                 _SettingRow(
                   title: 'Anonymous telemetry',
@@ -83,7 +90,7 @@ class _ConfigTabState extends State<ConfigTab> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Notifications, launch-at-startup, and telemetry are placeholders — not wired up yet.',
+            'Desktop notifications and anonymous telemetry are placeholders — not wired up yet.',
             style: TextStyle(color: CharonColors.muted, fontSize: 12),
           ),
           const SizedBox(height: 16),

@@ -11,4 +11,15 @@
       <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
     </application>
   </compatibility>
+  <!-- The TUN adapter needs an elevated process either way - this makes
+       Windows prompt UAC automatically on every launch (manual or via the
+       Task Scheduler "launch at startup" entry) instead of silently running
+       non-elevated and failing later when the tunnel tries to start. -->
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
+    <security>
+      <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false"/>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
 </assembly>

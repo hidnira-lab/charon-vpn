@@ -39,6 +39,14 @@ target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
 
+# MSVC's linker defaults to embedding /MANIFESTUAC:level='asInvoker' on top of
+# whatever runner.exe.manifest says, and mt.exe hard-fails (LNK1327) if the
+# two disagree - this has to match the requireAdministrator level declared
+# in runner.exe.manifest or the build breaks.
+target_link_options(${BINARY_NAME} PRIVATE
+  "/MANIFESTUAC:level='requireAdministrator' uiAccess='false'"
+)
+
 # wintun-bindings' build script drops wintun.dll next to whatever Cargo
 # target dir is building it, not into Flutter's runner output. cargokit
 # builds our rust/ crate into its own isolated cargo target dir under this

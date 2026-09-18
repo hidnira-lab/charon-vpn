@@ -1,3 +1,4 @@
+use std::os::windows::process::CommandExt;
 use std::process::Command;
 use std::sync::mpsc::Sender;
 
@@ -16,7 +17,7 @@ pub fn run(tx: Sender<AppEvent>) {
             ("ipconfig", &["/renew"][..]),
             ("ipconfig", &["/flushdns"][..]),
         ] {
-            let line = match Command::new(cmd).args(args).output() {
+            let line = match Command::new(cmd).args(args).creation_flags(0x08000000).output() {
                 Ok(out) if out.status.success() => {
                     format!("[network] {cmd} {} ok", args.join(" "))
                 }

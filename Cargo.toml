@@ -1,3 +1,10 @@
 [workspace]
 resolver = "2"
 members = ["app", "core", "charon_vpn/rust", "sync-server"]
+
+# Vendored fix: upstream `run_command()` (used for every `route`/`netsh`/
+# `powershell`/`ipconfig` call tun2proxy's Windows routing setup shells out
+# to) doesn't suppress the console window it briefly creates for each one -
+# see `vendor/tproxy-config-7.0.7/src/lib.rs` for the one-line patch.
+[patch.crates-io]
+tproxy-config = { path = "vendor/tproxy-config-7.0.7" }

@@ -1,15 +1,19 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../design/design.dart';
 
-/// Restyled per Milestone 6.6, wired to real totals in Milestone 12. "Total
-/// Down"/"Total Up" are the current calendar month's running totals from
-/// `TrafficStore` (persisted, survives app restart, resets each month) -
+/// Restyled per Milestone 6.6, wired to real totals in Milestone 12, chart
+/// wired to a real (session-only) throughput history in Milestone 15.
+/// "Total Down"/"Total Up" are the current calendar month's running totals
+/// from `TrafficStore` (persisted, survives app restart, resets each month).
 /// "Uptime"/"Sessions" stay placeholders, that's session-history tracking
-/// nobody asked for yet. The historical chart is still not implemented
-/// (needs a time-series buffer + a real chart widget, out of scope for
-/// Milestone 12's "live numbers" ask) - only the instant readouts landed.
+/// nobody asked for yet. `downHistory`/`upHistory` are a rolling in-memory
+/// window (not a real 24h history - that'd mean persisting 86400 one-second
+/// samples across restarts, nobody asked for that either), reset whenever
+/// the tunnel disconnects, same lifetime as the live Mbps readouts.
 /// Log console (relocated from Milestone 6.1) lives below, unchanged.
 class TelemetryTab extends StatelessWidget {
   const TelemetryTab({
@@ -18,16 +22,27 @@ class TelemetryTab extends StatelessWidget {
     required this.scrollController,
     required this.monthlyTxBytes,
     required this.monthlyRxBytes,
+    required this.downHistory,
+    required this.upHistory,
   });
 
   final List<String> logs;
   final ScrollController scrollController;
   final int monthlyTxBytes;
   final int monthlyRxBytes;
+  final List<double> downHistory;
+  final List<double> upHistory;
 
   static const _quotaGb = 1200;
 
   String _formatGb(int bytes) => (bytes / 1e9).toStringAsFixed(2);
+
+  void _copyLogs(BuildContext context) {
+    Clipboard.setData(ClipboardData(text: logs.join('\n')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Log disalin ke clipboard.')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,15 +88,15 @@ class TelemetryTab extends StatelessWidget {
                         children: [
                           const Icon(LucideIcons.activity, size: 16, color: CharonColors.primaryBright),
                           const SizedBox(width: 8),
-                          Text('THROUGHPUT / 24H', style: techLabel(fontSize: 13, color: CharonColors.muted)),
+                          Text('THROUGHPUT / SESSION', style: techLabel(fontSize: 13, color: CharonColors.muted)),
+                          const Spacer(),
+                          _LegendDot(color: CharonColors.primaryBright, label: 'Down'),
+                          const SizedBox(width: 12),
+                          _LegendDot(color: CharonColors.caution, label: 'Up'),
                         ],
                       ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Chart belum tersedia — total & live throughput udah real (lihat stat card di atas '
-                        'dan Dashboard), grafik historis-nya sendiri belum digarap.',
-                        style: TextStyle(color: CharonColors.muted, fontSize: 12),
-                      ),
+                      const SizedBox(height: 16),
+                      _ThroughputChart(downHistory: downHistory, upHistory: upHistory),
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -92,6 +107,13 @@ class TelemetryTab extends StatelessWidget {
                     const Icon(LucideIcons.terminal, size: 16, color: CharonColors.primaryBright),
                     const SizedBox(width: 8),
                     Text('DEBUG LOG', style: techLabel(fontSize: 13, color: CharonColors.muted)),
+                    const Spacer(),
+                    IconButton(
+                      icon: Icon(LucideIcons.copy, size: 16, color: CharonColors.muted),
+                      tooltip: 'Copy semua log',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: logs.isEmpty ? null : () => _copyLogs(context),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -115,6 +137,82 @@ class TelemetryTab extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 6),
+        Text(label, style: TextStyle(fontFamily: CharonFonts.mono, fontSize: 11, color: CharonColors.muted)),
+      ],
+    );
+  }
+}
+
+class _ThroughputChart extends StatelessWidget {
+  const _ThroughputChart({required this.downHistory, required this.upHistory});
+
+  final List<double> downHistory;
+  final List<double> upHistory;
+
+  List<FlSpot> _spots(List<double> history) => [
+        for (var i = 0; i < history.length; i++) FlSpot(i.toDouble(), history[i]),
+      ];
+
+  @override
+  Widget build(BuildContext context) {
+    if (downHistory.isEmpty && upHistory.isEmpty) {
+      return SizedBox(
+        height: 160,
+        child: Center(
+          child: Text(
+            'Belum ada data — connect dulu buat mulai ngumpulin throughput sesi ini.',
+            style: TextStyle(color: CharonColors.muted, fontSize: 12),
+          ),
+        ),
+      );
+    }
+    return SizedBox(
+      height: 160,
+      child: LineChart(
+        LineChartData(
+          minY: 0,
+          gridData: FlGridData(
+            show: true,
+            drawVerticalLine: false,
+            getDrawingHorizontalLine: (_) => FlLine(color: CharonColors.steel, strokeWidth: 1),
+          ),
+          titlesData: const FlTitlesData(show: false),
+          borderData: FlBorderData(show: false),
+          lineTouchData: const LineTouchData(enabled: false),
+          lineBarsData: [
+            LineChartBarData(
+              spots: _spots(downHistory),
+              color: CharonColors.primaryBright,
+              barWidth: 2,
+              dotData: const FlDotData(show: false),
+              belowBarData: BarAreaData(show: true, color: CharonColors.primaryBright.withValues(alpha: 0.15)),
+            ),
+            LineChartBarData(
+              spots: _spots(upHistory),
+              color: CharonColors.caution,
+              barWidth: 2,
+              dotData: const FlDotData(show: false),
+            ),
+          ],
+        ),
       ),
     );
   }

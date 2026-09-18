@@ -4249,8 +4249,6 @@ dependencies = [
 [[package]]
 name = "tproxy-config"
 version = "7.0.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4b7813b6e0ce19af2e784c14828cc05e80eff850ed4183df7b4a55e6036aeec"
 dependencies = [
  "cidr",
  "futures",

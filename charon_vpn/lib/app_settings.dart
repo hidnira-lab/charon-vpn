@@ -40,4 +40,12 @@ class AppSettings {
     data['lightMode'] = enabled;
     await _writeAll(data);
   }
+
+  Future<bool> loadLaunchAtStartup() async => (await _readAll())['launchAtStartup'] as bool? ?? false;
+
+  Future<void> saveLaunchAtStartup(bool enabled) async {
+    final data = await _readAll();
+    data['launchAtStartup'] = enabled;
+    await _writeAll(data);
+  }
 }

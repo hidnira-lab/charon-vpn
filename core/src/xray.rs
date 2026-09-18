@@ -1,6 +1,8 @@
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
@@ -22,13 +24,18 @@ impl XrayProcess {
         tx: Sender<AppEvent>,
         waker: Waker,
     ) -> std::io::Result<Self> {
-        let mut child = Command::new(xray_path)
-            .arg("run")
+        let mut cmd = Command::new(xray_path);
+        cmd.arg("run")
             .arg("-c")
             .arg(config_path)
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?;
+            .stderr(Stdio::piped());
+        // Without this, Windows pops up a visible console window for xray's
+        // subprocess even though this app has none of its own - the child
+        // still inherits a console by default unless explicitly suppressed.
+        #[cfg(windows)]
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        let mut child = cmd.spawn()?;
 
         if let Some(stdout) = child.stdout.take() {
             spawn_reader(stdout, tx.clone(), waker.clone());

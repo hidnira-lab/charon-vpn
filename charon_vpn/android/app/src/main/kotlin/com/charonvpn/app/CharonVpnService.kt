@@ -20,14 +20,37 @@ class CharonVpnService : VpnService() {
         /// ever one Activity/Service pair in this app, so a static callback
         /// is sufficient - no need for a full binder-based Service API.
         var onEstablished: ((Int) -> Unit)? = null
+
+        /// Same one-Activity/one-Service reasoning as `onEstablished` above:
+        /// a static reference is enough for MainActivity to push live
+        /// status/throughput text into the ongoing foreground notification
+        /// without a full bound-service API.
+        private var instance: CharonVpnService? = null
+
+        fun updateStatus(text: String) {
+            instance?.pushNotification(text)
+        }
     }
 
     private var vpnInterface: ParcelFileDescriptor? = null
 
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Charon VPN",
+                NotificationManager.IMPORTANCE_LOW,
+            )
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         // Must be called synchronously, before any other work, or Android
         // kills the service for missing the foreground-service deadline.
-        startForeground(NOTIFICATION_ID, buildNotification())
+        startForeground(NOTIFICATION_ID, buildNotification("Connecting..."))
 
         val builder = Builder()
             .setSession("Charon VPN")
@@ -101,27 +124,27 @@ class CharonVpnService : VpnService() {
         // Do not close vpnInterface here - detachFd() above already handed
         // ownership of the descriptor to Rust.
         vpnInterface = null
+        instance = null
         super.onDestroy()
     }
 
-    private fun buildNotification(): Notification {
+    private fun pushNotification(text: String) {
+        getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, buildNotification(text))
+    }
+
+    private fun buildNotification(text: String): Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Charon VPN",
-                NotificationManager.IMPORTANCE_LOW,
-            )
-            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
             return Notification.Builder(this, CHANNEL_ID)
                 .setContentTitle("Charon VPN")
-                .setContentText("Tunnel active")
+                .setContentText(text)
                 .setSmallIcon(android.R.drawable.ic_lock_lock)
+                .setOngoing(true)
                 .build()
         }
         @Suppress("DEPRECATION")
         return Notification.Builder(this)
             .setContentTitle("Charon VPN")
-            .setContentText("Tunnel active")
+            .setContentText(text)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
             .build()
     }

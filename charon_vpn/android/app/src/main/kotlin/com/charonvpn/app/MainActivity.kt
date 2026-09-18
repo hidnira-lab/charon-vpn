@@ -67,6 +67,10 @@ class MainActivity : FlutterActivity() {
                     stopService(Intent(this, CharonVpnService::class.java))
                     result.success(null)
                 }
+                "updateNotification" -> {
+                    CharonVpnService.updateStatus(call.argument<String>("text") ?: "Charon VPN")
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         }
