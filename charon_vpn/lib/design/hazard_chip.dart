@@ -9,7 +9,9 @@ enum HazardChipTone { caution, critical }
 /// safeguard", "Transition handler") — mirrors the `.hazard-stripe(-red)`
 /// CSS classes used as chip backgrounds in the reference.
 class HazardChip extends StatelessWidget {
-  const HazardChip({super.key, required this.label, this.tone = HazardChipTone.caution});
+  // Not `const` - reads `CharonColors` (theme-aware) in `build()`/painter.
+  // ignore: prefer_const_constructors_in_immutables
+  HazardChip({super.key, required this.label, this.tone = HazardChipTone.caution});
 
   final String label;
   final HazardChipTone tone;

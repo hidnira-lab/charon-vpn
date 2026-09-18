@@ -42,7 +42,7 @@ class _ConfigTabState extends State<ConfigTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(index: '07', title: 'Settings', desc: 'General preferences.'),
+          SectionHeader(index: '07', title: 'Settings', desc: 'General preferences.'),
           const SizedBox(height: 24),
           UnitPlate(
             code: 'CFG-00',

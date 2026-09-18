@@ -27,7 +27,7 @@ class FailsafeTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(
+          SectionHeader(
             index: '04',
             title: 'Reliability',
             desc: 'Fail-safe behavior when the link degrades or drops.',
@@ -46,7 +46,7 @@ class FailsafeTab extends StatelessWidget {
               desc: "Blocks new connections if xray crashes unexpectedly while connected — the TUN "
                   "adapter stays up until it reconnects. Doesn't apply to a manual disconnect or if "
                   "the TUN adapter itself is lost.",
-              chip: const HazardChip(label: 'CRITICAL SAFEGUARD', tone: HazardChipTone.critical),
+              chip: HazardChip(label: 'CRITICAL SAFEGUARD', tone: HazardChipTone.critical),
               toggle: RockerToggle(
                 value: killSwitch,
                 onChanged: onKillSwitchChanged,
@@ -66,7 +66,7 @@ class FailsafeTab extends StatelessWidget {
               desc: 'Automatically restarts xray and the tunnel after a drop. Retries 5 times, '
                   '5 seconds apart, per profile — if there\'s more than one saved profile, it fails '
                   'over through the rest before giving up.',
-              chip: const HazardChip(label: 'TRANSITION HANDLER', tone: HazardChipTone.caution),
+              chip: HazardChip(label: 'TRANSITION HANDLER', tone: HazardChipTone.caution),
               toggle: RockerToggle(value: autoReconnect, onChanged: onAutoReconnectChanged, tone: RockerTone.caution),
             ),
           ),

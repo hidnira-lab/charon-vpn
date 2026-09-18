@@ -161,15 +161,15 @@ class _SplitTabState extends State<SplitTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(
+          SectionHeader(
             index: '03',
             title: 'Split Tunneling',
             desc: 'Excluded targets bypass the tunnel. Handle with care.',
           ),
           const SizedBox(height: 16),
-          const HazardBanner(
+          HazardBanner(
             tone: HazardTone.caution,
-            child: Text('EXCLUDED TRAFFIC EGRESSES ON THE LOCAL NETWORK — UNPROTECTED'),
+            child: const Text('EXCLUDED TRAFFIC EGRESSES ON THE LOCAL NETWORK — UNPROTECTED'),
           ),
           const SizedBox(height: 24),
           LayoutBuilder(

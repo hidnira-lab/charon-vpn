@@ -9,7 +9,9 @@ enum HazardTone { caution, critical }
 /// Alert strip with a diagonal hazard stripe accent — used for kill-switch
 /// and split-tunnel warnings. Mirrors `HazardBanner` in the reference.
 class HazardBanner extends StatelessWidget {
-  const HazardBanner({super.key, this.tone = HazardTone.caution, required this.child});
+  // Not `const` - reads `CharonColors` (theme-aware) in `build()`/painter.
+  // ignore: prefer_const_constructors_in_immutables
+  HazardBanner({super.key, this.tone = HazardTone.caution, required this.child});
 
   final HazardTone tone;
   final Widget child;

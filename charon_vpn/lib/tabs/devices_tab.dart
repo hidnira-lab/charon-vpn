@@ -207,7 +207,7 @@ class _DevicesTabState extends State<DevicesTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(
+          SectionHeader(
             index: '06',
             title: 'Registered Units',
             desc: 'Paired devices sharing this Charon configuration.',

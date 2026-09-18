@@ -56,7 +56,7 @@ class TelemetryTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionHeader(
+                SectionHeader(
                   index: '05',
                   title: 'Telemetry',
                   desc: '24-hour throughput and session diagnostics.',

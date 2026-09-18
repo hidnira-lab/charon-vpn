@@ -139,6 +139,15 @@ class CharonVpnService : VpnService() {
                 .setContentText(text)
                 .setSmallIcon(android.R.drawable.ic_lock_lock)
                 .setOngoing(true)
+                // Content isn't sensitive (connection status + throughput),
+                // so show it in full on the lock screen instead of letting
+                // Android redact it under privacy-conscious device settings.
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                // `pushNotification()` calls `notify()` on this same ID every
+                // ~1s to refresh the throughput text - without this, some
+                // OEM skins re-alert (sound/vibrate) on every single update
+                // instead of only the first time this notification is posted.
+                .setOnlyAlertOnce(true)
                 .build()
         }
         @Suppress("DEPRECATION")
@@ -146,6 +155,8 @@ class CharonVpnService : VpnService() {
             .setContentTitle("Charon VPN")
             .setContentText(text)
             .setSmallIcon(android.R.drawable.ic_lock_lock)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setOnlyAlertOnce(true)
             .build()
     }
 }

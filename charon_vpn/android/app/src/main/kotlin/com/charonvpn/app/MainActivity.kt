@@ -1,7 +1,9 @@
 package com.charonvpn.app
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
@@ -10,6 +12,7 @@ import io.flutter.plugin.common.MethodChannel
 
 private const val CHANNEL_NAME = "com.charonvpn.app/vpn"
 private const val VPN_REQUEST_CODE = 100
+private const val NOTIFICATION_REQUEST_CODE = 101
 
 class MainActivity : FlutterActivity() {
     private var channel: MethodChannel? = null
@@ -50,6 +53,17 @@ class MainActivity : FlutterActivity() {
                     result.success(apps)
                 }
                 "prepareAndStart" -> {
+                    // Best-effort - fired regardless of outcome, doesn't gate
+                    // the VPN flow below. If denied, the foreground-service
+                    // notification just stays invisible (service still runs
+                    // fine); if granted later mid-session, the next periodic
+                    // `updateNotification` call self-heals it since that's a
+                    // fresh `notify()` call, not the original `startForeground`.
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), NOTIFICATION_REQUEST_CODE)
+                    }
                     @Suppress("UNCHECKED_CAST")
                     excludedPackages = ArrayList(call.argument<List<String>>("excludedPackages") ?: emptyList())
                     @Suppress("UNCHECKED_CAST")

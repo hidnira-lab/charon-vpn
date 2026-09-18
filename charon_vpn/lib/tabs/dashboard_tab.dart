@@ -39,16 +39,16 @@ class DashboardTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(
+          SectionHeader(
             index: '01',
             title: 'Control Deck',
             desc: 'Primary tunnel command. Blue signals a secure, active link.',
           ),
           const SizedBox(height: 24),
           if (!hasProfile) ...[
-            const HazardBanner(
+            HazardBanner(
               tone: HazardTone.caution,
-              child: Text('NO SERVER PROFILE SELECTED — OPEN NODES TO ADD ONE'),
+              child: const Text('NO SERVER PROFILE SELECTED — OPEN NODES TO ADD ONE'),
             ),
             const SizedBox(height: 24),
           ],
@@ -58,9 +58,9 @@ class DashboardTab extends StatelessWidget {
           // showing this banner in the idle case would be a false safety
           // claim (see CLAUDE.md "Milestone 8" notes).
           if (blocked) ...[
-            const HazardBanner(
+            HazardBanner(
               tone: HazardTone.critical,
-              child: Text('KILL SWITCH ACTIVE — INTERNET BLOCKED UNTIL XRAY RECONNECTS'),
+              child: const Text('KILL SWITCH ACTIVE — INTERNET BLOCKED UNTIL XRAY RECONNECTS'),
             ),
             const SizedBox(height: 24),
           ],
@@ -272,7 +272,7 @@ class _InfoColumn extends StatelessWidget {
                     tone: ReadoutTone.primary,
                   ),
                   Readout(label: 'Session', value: connected ? sessionLabel : '00:00:00'),
-                  const Readout(label: 'Protocol', value: 'VLESS', unit: 'Reality'),
+                  Readout(label: 'Protocol', value: 'VLESS', unit: 'Reality'),
                   Readout(
                     label: 'Latency',
                     value: connected && latencyMs != null ? '$latencyMs' : '—',

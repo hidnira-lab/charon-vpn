@@ -8,7 +8,9 @@ enum ReadoutTone { normal, primary, caution }
 /// HUD-style key/value pair with a left accent border — used for link
 /// telemetry (egress IP, latency, throughput, etc).
 class Readout extends StatelessWidget {
-  const Readout({
+  // Not `const` - reads `CharonColors` (theme-aware) in `build()`.
+  // ignore: prefer_const_constructors_in_immutables
+  Readout({
     super.key,
     required this.label,
     required this.value,

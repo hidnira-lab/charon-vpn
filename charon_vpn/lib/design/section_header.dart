@@ -6,7 +6,12 @@ import 'fonts.dart';
 /// Stencil-style screen header: "UNIT.NN" eyebrow, title, optional
 /// description and trailing action — used at the top of every screen.
 class SectionHeader extends StatelessWidget {
-  const SectionHeader({super.key, required this.index, required this.title, this.desc, this.trailing});
+  // Deliberately not `const` - `build()` reads `CharonColors`/`techLabel()`
+  // (light/dark aware), so a `const` instance would freeze its text colors
+  // at whichever theme was active on first build instead of updating when
+  // the user toggles light/dark mode.
+  // ignore: prefer_const_constructors_in_immutables
+  SectionHeader({super.key, required this.index, required this.title, this.desc, this.trailing});
 
   final String index;
   final String title;
