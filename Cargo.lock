@@ -3602,7 +3602,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust_lib_flutter_app"
+name = "rust_lib_charon_vpn"
 version = "0.1.0"
 dependencies = [
  "charon-core",

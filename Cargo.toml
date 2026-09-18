@@ -1,3 +1,3 @@
 [workspace]
 resolver = "2"
-members = ["app", "core", "flutter_app/rust", "sync-server"]
+members = ["app", "core", "charon_vpn/rust", "sync-server"]
