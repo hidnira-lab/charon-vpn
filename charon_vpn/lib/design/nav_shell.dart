@@ -81,7 +81,7 @@ class _CharonNavShellState extends State<CharonNavShell> {
             ),
             child: Column(
               children: [
-                const _Brand(),
+                _Brand(),
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -111,7 +111,7 @@ class _CharonNavShellState extends State<CharonNavShell> {
       appBar: AppBar(
         backgroundColor: CharonColors.surface2,
         elevation: 0,
-        title: const _BrandCompact(),
+        title: _BrandCompact(),
         actions: [
           IconButton(
             tooltip: 'Open menu',
@@ -227,7 +227,9 @@ class _NavTile extends StatelessWidget {
 }
 
 class _Brand extends StatelessWidget {
-  const _Brand();
+  // Not `const` - reads `CharonColors`/`techLabel()` (theme-aware) in `build()`.
+  // ignore: prefer_const_constructors_in_immutables
+  _Brand();
 
   @override
   Widget build(BuildContext context) {
@@ -244,7 +246,7 @@ class _Brand extends StatelessWidget {
               color: CharonColors.surface,
               border: Border.all(color: CharonColors.primaryBright),
             ),
-            child: const Icon(LucideIcons.cpu, size: 20, color: CharonColors.primaryBright),
+            child: Image.asset('assets/icon/icon_source.png', width: 28, height: 28),
           ),
           const SizedBox(width: 12),
           Column(
@@ -269,7 +271,9 @@ class _Brand extends StatelessWidget {
 }
 
 class _BrandCompact extends StatelessWidget {
-  const _BrandCompact();
+  // Not `const` - reads `CharonColors`/`techLabel()` (theme-aware) in `build()`.
+  // ignore: prefer_const_constructors_in_immutables
+  _BrandCompact();
 
   @override
   Widget build(BuildContext context) {
@@ -284,7 +288,7 @@ class _BrandCompact extends StatelessWidget {
             color: CharonColors.surface,
             border: Border.all(color: CharonColors.primaryBright),
           ),
-          child: const Icon(LucideIcons.cpu, size: 16, color: CharonColors.primaryBright),
+          child: Image.asset('assets/icon/icon_source.png', width: 22, height: 22),
         ),
         const SizedBox(width: 8),
         Text('CHARON', style: techLabel(fontSize: 16)),
